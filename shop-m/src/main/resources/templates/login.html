@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="/css/style.css"/>
+    <style>
+
+        .login-container {
+            background: #ffffff;
+            padding: 40px 30px;
+            width: 350px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .login-container h2 {
+            margin-bottom: 25px;
+            text-align: center;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus {
+            border-color: #4e73df;
+            outline: none;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background-color: #4e73df;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .login-button:hover {
+            background-color: #2e59d9;
+        }
+
+        .footer-text {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 13px;
+            color: #777;
+        }
+
+        .footer-text a {
+            color: #4e73df;
+            text-decoration: none;
+        }
+
+        .footer-text a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            margin-bottom: 15px;
+            color: #e74a3b;
+            font-size: 13px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <h2>로그인</h2>
+
+    <!-- 에러 메시지 영역 -->
+    <div class="error-message" style="display:none;">
+        아이디 또는 비밀번호가 올바르지 않습니다.
+    </div>
+
+    <div>
+        <div class="form-group">
+            <label for="username">아이디</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+
+        <button type="button" class="login-button" id="loginButton">로그인</button>
+    </div>
+
+    <form th:action="@{/signup}" method="get">
+        <div class="footer-text">
+            아직 회원이 아니신가요? <a th:href="@{/signup}">회원가입</a>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+    const username = document.getElementById('username');
+    const password = document.getElementById('password');
+    const fetchLogin = () => {
+        if (!username.value) {
+            alert("ID 를 입력해주세요");
+            return;
+        }
+        if (!password.value) {
+            alert("비밀번호를 입력해주세요");
+            return;
+        }
+        fetch("/api/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                username: username.value,
+                password: password.value
+            })
+        })
+            .then(res => {
+                window.location.href = "/";
+            })
+            .catch(err => alert(err));
+    }
+    const loginButton = document.getElementById('loginButton');
+    loginButton.addEventListener("click", (e) => {
+        e.preventDefault();
+
+        fetchLogin();
+    });
+
+    [username, password].forEach((el) => {
+        el.addEventListener("keyup", event => {
+            if (event.key === "Enter") {
+                fetchLogin();
+            }
+        })
+    })
+</script>
+</body>
+</html>

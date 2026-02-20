@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>MyBoard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: #f4f6f9; display: flex; flex-direction: column; min-height: 100vh; }
+
+        header {
+            background: #ffffff;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        .user-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .logout-btn {
+            padding: 6px 14px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            max-width: 1200px;
+            margin: 24px auto;
+            width: 100%;
+            gap: 24px;
+        }
+
+        aside {
+            width: 220px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        aside ul { list-style: none; }
+        aside li { margin-bottom: 12px; }
+        aside a { text-decoration: none; color: #374151; font-weight: 500; }
+        aside a:hover { color: #2563eb; }
+
+        main {
+            flex: 1;
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .board-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .write-btn {
+            padding: 6px 14px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        tr:hover { background-color: #f9fafb; }
+
+        footer {
+            background: #ffffff;
+            padding: 16px;
+            text-align: center;
+            font-size: 13px;
+            color: #6b7280;
+            box-shadow: 0 -2px 6px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">MyBoard</div>
+    <div class="user-area">
+        <span th:text="${#authentication.name}">username</span>
+        <form th:action="@{/logout}" method="post">
+            <button class="logout-btn" type="submit">로그아웃</button>
+        </form>
+    </div>
+</header>
+
+<div class="container">
+    <aside>
+        <ul>
+            <li><a th:href="@{/}">홈</a></li>
+            <li><a th:href="@{/board}">게시판</a></li>
+            <li><a th:href="@{/popular}">인기글</a></li>
+            <li><a th:href="@{/settings}">설정</a></li>
+        </ul>
+    </aside>
+
+    <main>
+        <div class="board-header">
+            <h2>게시판</h2>
+            <button class="write-btn" onclick="location.href='/board/write'">글쓰기</button>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>번호</th>
+                <th>제목</th>
+                <th>작성자</th>
+                <th>작성일</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="post : ${posts}">
+                <td th:text="${post.id}">1</td>
+                <td>
+                    <a th:href="@{/board/{id}(id=${post.id})}"
+                       th:text="${post.title}">제목</a>
+                </td>
+                <td th:text="${post.author}">작성자</td>
+                <td th:text="${post.createdDate}">2026-02-18</td>
+            </tr>
+            </tbody>
+        </table>
+    </main>
+</div>
+
+<footer>
+    © 2026 MyBoard. All rights reserved.
+</footer>
+
+</body>
+</html>

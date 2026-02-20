@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="/css/style.css"/>
+    <style>
+
+        .login-container {
+            background: #ffffff;
+            padding: 40px 30px;
+            width: 350px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .login-container h2 {
+            margin-bottom: 25px;
+            text-align: center;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus {
+            border-color: #4e73df;
+            outline: none;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background-color: #4e73df;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .login-button:hover {
+            background-color: #2e59d9;
+        }
+
+        .footer-text {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 13px;
+            color: #777;
+        }
+
+        .footer-text a {
+            color: #4e73df;
+            text-decoration: none;
+        }
+
+        .footer-text a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            margin-bottom: 15px;
+            color: #e74a3b;
+            font-size: 13px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <h2>회원가입</h2>
+
+    <!-- 에러 메시지 영역 -->
+    <div class="messageArea" id="messageArea" style="display:none;">
+
+    </div>
+
+    <div>
+        <div class="form-group">
+            <label for="username">이름</label>
+            <input type="text" id="fullName" name="fullName" required>
+        </div>
+        <div class="form-group">
+            <label for="username">아이디</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div class="form-group">
+            <label for="password">비밀번호 확인</label>
+            <input type="password" id="passwordConfirm" name="passwordConfirm" required>
+        </div>
+        <div class="form-group">
+            <label for="email">이메일</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+
+        <button type="button" class="login-button" id="signupButton">회원가입</button>
+    </div>
+</div>
+
+<script>
+    let validationResult = false;
+    const messageArea = document.getElementById("messageArea");
+    const fullName = document.getElementById('fullName')
+    const username = document.getElementById('username');
+    const password  = document.getElementById('password');
+    const passwordConfirm = document.getElementById('passwordConfirm');
+    const email = document.getElementById('email');
+    const fetchSignup = () => {
+        if (!fullName.value) {
+            alert("이름을 입력해주세요.");
+        }
+        if (!username.value) {
+            alert("ID 를 입력해주세요.");
+            return;
+        }
+        if (!password.value) {
+            alert("비밀번호를 입력해주세요.");
+            return;
+        }
+        if (!passwordConfirm.value) {
+            alert("비밀번호 확인을 입력해주세요.");
+            return;
+        }
+        if (password.value !== passwordConfirm.value) {
+            alert("비밀번호가 일치하지 않습니다.");
+            return;
+        }
+        if (!email.value) {
+            alert("이메일을 입력해주세요.");
+            return;
+        }
+        if (!validationResult) {
+            alert("아이디 중복입니다.")
+            return;
+        }
+        fetch("/api/users/signup", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                username: username.value,
+                password: password.value,
+                passwordConfirm: passwordConfirm.value,
+                fullName: fullName.value,
+                email: email.value,
+            })
+        })
+            .then(res => {
+                confirm("가입에 성공했습니다.");
+                window.location.href = "/login";
+            })
+            .catch(err => alert(err));
+    }
+    const signupButton = document.getElementById('signupButton');
+
+    signupButton.addEventListener("click", (e) => {
+        e.preventDefault();
+
+        fetchSignup();
+    })
+    const debounce = (callback, delay) => {
+        let timer;
+        return function (...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                callback.apply(this, args);
+            }, delay);
+        };
+    }
+    const validateUsername = (username) => {
+        if (!username.trim()) return;
+
+        fetch(`/api/users/validate-username?username=${encodeURIComponent(username)}`, {
+            method: "POST",
+        })
+            .then(res => {
+                console.log("checkpoint000")
+                if (res.status !== 200) throw new Error();
+                console.log("checkpoint111")
+                validationResult = true;
+                messageArea.style.display = "block";
+                messageArea.style.color = "green";
+                messageArea.innerText = "사용 가능한 아이디입니다.";
+                setTimeout(() => {
+                    messageArea.style.display = "none";
+                }, 3000)
+            })
+            .catch(err => {
+                console.log("checkpoint222")
+                validationResult = false;
+                messageArea.style.display = "block";
+                messageArea.style.color = "red";
+                messageArea.innerText = "이미 사용 중인 아이디입니다.";
+                setTimeout(() => {
+                    messageArea.style.display = "none";
+                }, 3000)
+            });
+    }
+    const debouncedCheck = debounce((e) => {
+        validateUsername(e.target.value);
+    }, 555);
+    username.addEventListener("input", debouncedCheck)
+    //const username = document.getElementById('username');
+    //const password = document.getElementById('password');
+    //[username, password].forEach((el) => {
+    //    el.addEventListener("keyup", event => {
+    //        if (event.key === "Enter") {
+    //            fetchLogin();
+    //        }
+    //    })
+    //})
+</script>
+</body>
+</html>
