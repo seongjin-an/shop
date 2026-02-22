@@ -3,10 +3,14 @@ package com.ansj.shopproduct.product.dto;
 import com.ansj.shopproduct.product.entity.ProductEntity;
 import com.ansj.shopproduct.product.entity.ProductStatus;
 import jakarta.validation.constraints.NotEmpty;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
+@AllArgsConstructor
+@Builder
 @Data
 public class CreateProductDto {
     @NotEmpty

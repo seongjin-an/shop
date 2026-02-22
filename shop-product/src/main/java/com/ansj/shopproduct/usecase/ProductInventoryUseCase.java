@@ -4,7 +4,6 @@ import com.ansj.shopproduct.common.AggregateId;
 import com.ansj.shopproduct.event.service.InboxEventService;
 import com.ansj.shopproduct.event.service.OutboxEventService;
 import com.ansj.shopproduct.inventory.dto.inbound.OrderCreatedEvent;
-import com.ansj.shopproduct.inventory.dto.outbound.InventoryReservedEvent;
 import com.ansj.shopproduct.product.model.ProductDetail;
 import com.ansj.shopproduct.inventory.service.InventoryService;
 import com.ansj.shopproduct.product.dto.CreateProductDto;
@@ -35,7 +34,7 @@ public class ProductInventoryUseCase {
     public AggregateId createProductWithInventory(CreateProductDto dto, int initialQuantity) {
         AggregateId productId = productService.createProduct(dto);
 
-        inventoryService.initializeInventory(productId, initialQuantity);
+        inventoryService.initializeProductInventory(productId, initialQuantity);
 
         return productId;
     }

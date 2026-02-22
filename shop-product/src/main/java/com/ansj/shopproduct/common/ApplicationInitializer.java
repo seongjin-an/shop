@@ -1,27 +1,34 @@
 package com.ansj.shopproduct.common;
 
+import com.ansj.shopproduct.product.dto.CreateProductDto;
+import com.ansj.shopproduct.usecase.ProductInventoryUseCase;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.core.KafkaAdmin;
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
 
 @Slf4j
-//@Configuration
+@RequiredArgsConstructor
+@Component
 public class ApplicationInitializer implements ApplicationRunner {
 
-    private final KafkaAdmin kafkaAdmin;
+    private final ProductInventoryUseCase productInventoryUseCase;
 
-    public ApplicationInitializer(KafkaAdmin kafkaAdmin) {
-        this.kafkaAdmin = kafkaAdmin;
-    }
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-//        try (AdminClient adminClient = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
-//            new NewTopic()
-//        }
+        initProduct();
+    }
+
+    private void initProduct() {
+        CreateProductDto product = CreateProductDto.builder()
+                .productName("비타민A")
+                .productPrice(new BigDecimal(50000))
+                .productDesc("비타민A 상품")
+                .build();
+        productInventoryUseCase.createProductWithInventory(product, 10000);
     }
 }

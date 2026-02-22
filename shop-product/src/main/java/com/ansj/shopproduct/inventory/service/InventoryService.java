@@ -36,10 +36,11 @@ public class InventoryService {
     }
 
     @Transactional
-    public void initializeInventory(AggregateId productId, int quantity) {
+    public void initializeProductInventory(AggregateId productId, int quantity) {
         InventoryEntity inventory = InventoryEntity.builder()
                 .productId(productId.id())
                 .quantity(quantity)
+                .reservedQuantity(0)
                 .active(true)
                 .build();
 
