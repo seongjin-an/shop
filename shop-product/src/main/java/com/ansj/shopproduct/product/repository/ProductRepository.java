@@ -7,8 +7,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.UUID;
 
-public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
+public interface ProductRepository extends JpaRepository<ProductEntity, UUID> {
     List<ProductEntity> findByProductStatus(ProductStatus productStatus);
     Page<ProductEntity> findByProductStatusAndDeletedAtIsNull(ProductStatus productStatus, Pageable pageable);
 }

@@ -1,11 +1,13 @@
 package com.ansj.shopproduct.product.entity;
 
+import com.ansj.shopproduct.common.UuidUtils;
 import com.ansj.shopproduct.product.model.Product;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -21,8 +23,7 @@ import java.time.LocalDateTime;
 public class ProductEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long productId;
+    private UUID productId;
 
     @Column(name = "product_name", nullable = false)
     private String productName;
@@ -85,6 +86,9 @@ public class ProductEntity {
 
     @PrePersist
     protected void onCreate() {
+        if (this.productId == null) {
+            this.productId = UuidUtils.createV7();
+        }
         this.createdAt = LocalDateTime.now();
         this.updatedAt = this.createdAt;
 

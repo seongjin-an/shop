@@ -1,5 +1,6 @@
 package com.ansj.shopproduct.product.service;
 
+import com.ansj.shopproduct.common.AggregateId;
 import com.ansj.shopproduct.product.dto.CreateProductDto;
 import com.ansj.shopproduct.product.entity.ProductEntity;
 import com.ansj.shopproduct.product.entity.ProductStatus;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -23,12 +25,13 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     @Transactional
-    public Long createProduct(CreateProductDto dto) {
+    public AggregateId createProduct(CreateProductDto dto) {
         ProductEntity productEntity = dto.toEntity();
-        return productRepository.save(productEntity).getProductId();
+        ProductEntity save = productRepository.save(productEntity);
+        return AggregateId.from(save.getProductId());
     }
 
-    public Product getProduct(Long productId) {
+    public Product getProduct(UUID productId) {
         ProductEntity productEntity = getProductById(productId);
         return productEntity.toModel();
     }
@@ -39,37 +42,37 @@ public class ProductService {
         return productEntities.map(ProductEntity::toModel);
     }
 
-    public boolean isOrderable(Long productId) {
+    public boolean isOrderable(UUID productId) {
         ProductEntity productEntity = getProductById(productId);
         return productEntity.getProductStatus() == ProductStatus.ACTIVE;
     }
 
 
     @Transactional
-    public void changePrice(Long productId, BigDecimal newPrice) {
+    public void changePrice(UUID productId, BigDecimal newPrice) {
         ProductEntity productEntity = getProductById(productId);
         productEntity.changePrice(newPrice);
     }
 
     @Transactional
-    public void deactivateProduct(Long productId) {
+    public void deactivateProduct(UUID productId) {
         ProductEntity productEntity = getProductById(productId);
         productEntity.deactivate();
     }
 
     @Transactional
-    public void activateProduct(Long productId) {
+    public void activateProduct(UUID productId) {
         ProductEntity productEntity = getProductById(productId);
         productEntity.activate();
     }
 
     @Transactional
-    public void deleteProduct(Long productId) {
+    public void deleteProduct(UUID productId) {
         ProductEntity productEntity = getProductById(productId);
         productEntity.softDelete();
     }
 
-    private ProductEntity getProductById(Long productId) {
+    private ProductEntity getProductById(UUID productId) {
         return productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("상품이 존재하지 않습니다."));
     }

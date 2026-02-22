@@ -39,7 +39,14 @@ Order Service
   consume → PAYMENT_COMPLETED / PAYMENT_FAILED
 ```
 
-### RUN
-- run docker container first
-- run shop-f, shop-m, ...
+### SETUP & RUN
+1. run docker container first
+
+2. kafka topics
+```bash
+$ docker exec -it kafka kafka-topics --create --topic order-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+Created topic order-created.
+```
+
+3. run shop-f, shop-m, ...
 

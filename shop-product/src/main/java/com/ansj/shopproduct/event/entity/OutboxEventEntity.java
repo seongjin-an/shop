@@ -1,9 +1,7 @@
 package com.ansj.shopproduct.event.entity;
 
 
-import com.ansj.shopproduct.common.AggregateId;
-import com.ansj.shopproduct.common.EventId;
-import com.ansj.shopproduct.common.SagaId;
+import com.ansj.shopproduct.common.UuidUtils;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -23,16 +21,16 @@ import java.util.UUID;
         }
 )
 public class OutboxEventEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    private Long id;
+    @Id
+    @Column(name = "id", columnDefinition = "BINARY(16)")
+    private UUID id;
 
     // 이 이벤트 자체의 고유 ID (절대 재사용 X)
     @Column(name = "event_id", nullable = false, unique = true, columnDefinition = "BINARY(16)")
     private UUID eventId;
 
     // Saga 흐름 식별자 (처음 이벤트에서 생성, 이후 유지)
-    @Column(name = "saga_id", nullable = false, unique = true, columnDefinition = "BINARY(16)")
+    @Column(name = "saga_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID sagaId;
 
     @Column(name = "event_type", nullable = false)
@@ -48,7 +46,7 @@ public class OutboxEventEntity {
     @Column(name = "payload", nullable = false)
     private String payload;          // JSON
 
-    @Enumerated(EnumType.STRING)
+    //@Enumerated(EnumType.STRING) // 추후에 수정하자
     @Column(name = "status", nullable = false)
     private String status;     // NEW, SENT
 
@@ -60,6 +58,13 @@ public class OutboxEventEntity {
 
     @Column(name = "retry_count")
     private Integer retryCount;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.id == null) {
+            this.id = UuidUtils.createV7();
+        }
+    }
 
     @Builder
     public OutboxEventEntity(

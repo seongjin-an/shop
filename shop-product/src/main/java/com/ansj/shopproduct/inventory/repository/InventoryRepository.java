@@ -6,11 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-public interface InventoryRepository extends JpaRepository<InventoryEntity, Long> {
-    Optional<InventoryEntity> findByProductId(Long productId);
+public interface InventoryRepository extends JpaRepository<InventoryEntity, UUID> {
+    Optional<InventoryEntity> findByProductId(UUID productId);
 
-    boolean existsByProductId(Long productId);
+    boolean existsByProductId(UUID productId);
 
-    List<InventoryEntity> findByProductIdIn(Collection<Long> productIds);
+    List<InventoryEntity> findByProductIdIn(Collection<UUID> productIds);
 }

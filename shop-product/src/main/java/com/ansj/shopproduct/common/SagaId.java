@@ -1,8 +1,12 @@
 package com.ansj.shopproduct.common;
 
+import java.util.Objects;
 import java.util.UUID;
 
 public record SagaId(UUID id) {
+    public SagaId {
+        Objects.requireNonNull(id, "SagaId cannot be null");
+    }
     public static SagaId newId() {
         return new SagaId(UuidUtils.createV7());
     }

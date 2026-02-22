@@ -1,9 +1,11 @@
 package com.ansj.shopproduct.inventory.entity;
 
+import com.ansj.shopproduct.common.UuidUtils;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -18,14 +20,13 @@ import java.time.LocalDateTime;
 @Entity
 public class InventoryEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long inventoryId;
+    private UUID inventoryId;
 
     /**
      * 상품 ID (Product Service와 분리 가능하도록 FK 강제하지 않음)
      */
-    @Column(name = "product_id", nullable = false)
-    private Long productId;
+    @Column(name = "product_id", nullable = false, columnDefinition = "BINARY(16)")
+    private UUID productId;
 
     /**
      * 현재 재고 수량
@@ -65,7 +66,6 @@ public class InventoryEntity {
      */
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
-
 
     ///////////////////////////////////////////////////
     public void increase(int amount) {
@@ -140,6 +140,9 @@ public class InventoryEntity {
 
     @PrePersist
     protected void onCreate() {
+        if (this.inventoryId == null) {
+            this.inventoryId = UuidUtils.createV7();
+        }
         this.createdAt = LocalDateTime.now();
         this.updatedAt = this.createdAt;
         if (this.quantity == null) {

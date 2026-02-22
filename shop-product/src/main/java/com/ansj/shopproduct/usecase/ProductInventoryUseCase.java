@@ -1,5 +1,6 @@
 package com.ansj.shopproduct.usecase;
 
+import com.ansj.shopproduct.common.AggregateId;
 import com.ansj.shopproduct.event.service.InboxEventService;
 import com.ansj.shopproduct.event.service.OutboxEventService;
 import com.ansj.shopproduct.inventory.dto.inbound.OrderCreatedEvent;
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -29,15 +32,15 @@ public class ProductInventoryUseCase {
     /* 나중에 read service, write service 를 분리하든가 */
 
     @Transactional
-    public Long createProductWithInventory(CreateProductDto dto, int initialQuantity) {
-        Long productId = productService.createProduct(dto);
+    public AggregateId createProductWithInventory(CreateProductDto dto, int initialQuantity) {
+        AggregateId productId = productService.createProduct(dto);
 
         inventoryService.initializeInventory(productId, initialQuantity);
 
         return productId;
     }
 
-    public ProductDetail getProductDetail(Long productId) {
+    public ProductDetail getProductDetail(UUID productId) {
         Product product = productService.getProduct(productId);
         int quantity = inventoryService.getQuantity(productId);
         return ProductDetail.of(product, quantity);
@@ -45,7 +48,7 @@ public class ProductInventoryUseCase {
 
     /* order 서비스로부터 발행된 이벤트로 인해 invoke ! */
     @Transactional
-    public void order(Long productId, int quantity) {
+    public void order(UUID productId, int quantity) {
         if (!productService.isOrderable(productId)) {
             throw new IllegalStateException("주문 불가 상품");
         }

@@ -1,5 +1,6 @@
 package com.ansj.shopproduct.inventory.service;
 
+import com.ansj.shopproduct.common.AggregateId;
 import com.ansj.shopproduct.inventory.dto.InventoryItem;
 import com.ansj.shopproduct.inventory.entity.InventoryEntity;
 import com.ansj.shopproduct.inventory.repository.InventoryRepository;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -21,22 +23,22 @@ public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
 
-    public int getQuantity(Long productId) {
+    public int getQuantity(UUID productId) {
         return getInventory(productId).getQuantity();
     }
 
-    public boolean exists(Long productId) {
+    public boolean exists(UUID productId) {
         return inventoryRepository.existsByProductId(productId);
     }
-    public boolean canDecrease(Long productId, int amount) {
+    public boolean canDecrease(UUID productId, int amount) {
         InventoryEntity inventory = getInventory(productId);
         return inventory.getQuantity() >= amount;
     }
 
     @Transactional
-    public void initializeInventory(Long productId, int quantity) {
+    public void initializeInventory(AggregateId productId, int quantity) {
         InventoryEntity inventory = InventoryEntity.builder()
-                .productId(productId)
+                .productId(productId.id())
                 .quantity(quantity)
                 .active(true)
                 .build();
@@ -45,20 +47,20 @@ public class InventoryService {
     }
 
     @Transactional
-    public void increaseInventory(Long productId, int amount) {
+    public void increaseInventory(UUID productId, int amount) {
         InventoryEntity inventory = getInventory(productId);
         inventory.increase(amount);
     }
 
     @Transactional
-    public void decreaseInventory(Long productId, int amount) {
+    public void decreaseInventory(UUID productId, int amount) {
         InventoryEntity inventory = getInventory(productId);
         if (inventory.getQuantity() < amount) throw new IllegalStateException("재고가 존재하지 않습니다.");
 
         inventory.decrease(amount);
     }
 
-    private InventoryEntity getInventory(Long productId) {
+    private InventoryEntity getInventory(UUID productId) {
         return inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> new IllegalArgumentException("재고가 존재하지 않습니다."));
     }
@@ -70,7 +72,7 @@ public class InventoryService {
     )
     @Transactional
     public void reserve(List<InventoryItem> items) {
-        Map<Long, Integer> itemMap = items.stream()
+        Map<UUID, Integer> itemMap = items.stream()
                 .collect(Collectors.toMap(InventoryItem::getProductId, InventoryItem::getQuantity));
 
         List<InventoryEntity> inventories = inventoryRepository.findByProductIdIn(itemMap.keySet());

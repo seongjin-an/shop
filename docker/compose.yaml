@@ -10,20 +10,20 @@ services:
     ports:
       - "23306:3306"
     volumes:
-      - ./data/mysql:/var/lib/mysql
+      - ./.data/mysql:/var/lib/mysql
   redis:
     image: redis:7.4.0
     ports:
       - "16379:6379"
     volumes:
-      - ./data/redis:/data/
+      - ./.data/redis:/data/
   redis-insight:
     image: redis/redisinsight:2.64.1
     restart: unless-stopped
     ports:
       - "15540:5540"
     volumes:
-      - ./data/redis-insight:/data
+      - ./.data/redis-insight:/data
   kafka:
     image: confluentinc/cp-kafka:7.5.1 # Apache Kafka 3.5.x = Confluent Platform 7.5.x
     container_name: kafka
@@ -50,6 +50,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     volumes:
       - ./.data/kafka:/var/lib/kafka/data
   kafka-ui:

@@ -1,5 +1,6 @@
 package com.ansj.shopproduct.event.entity;
 
+import com.ansj.shopproduct.common.UuidUtils;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -15,23 +16,23 @@ import java.util.UUID;
 @Entity
 public class InboxEventEntity {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    private Long id;
+    @Id
+    @Column(name = "id", columnDefinition = "BINARY(16)")
+    private UUID id;
 
     // ORDER_CREATED, ORDER_CANCELED, PAYMENT_SUCCESS, PAYMENT_FAIL
     @Column(name = "event_type", nullable = false)
     private String eventType; // 이벤트 타입이 뭐가 있을지 ... 모르니 일단 String
 
     // 수신한 이벤트의 고유 ID (멱등성 체크용)
-    @Column(name = "event_id", unique = true, nullable = false)
+    @Column(name = "event_id", nullable = false, unique = true, columnDefinition = "BINARY(16)")
     private UUID eventId;
 
     // SAGA 흐름 추적
-    @Column(name = "saga_id", nullable = false)
+    @Column(name = "saga_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID sagaId;
 
-    @Column(name = "aggregate_id", nullable = false)
+    @Column(name = "aggregate_id", nullable = false, unique = true, columnDefinition = "BINARY(16)")
     private UUID aggregateId;
 
     // ORDER, PAYMENT
@@ -54,5 +55,12 @@ public class InboxEventEntity {
         this.aggregateType = aggregateType;
         this.payload = payload;
         this.processedAt = LocalDateTime.now();
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (this.id == null) {
+            this.id = UuidUtils.createV7();
+        }
     }
 }
