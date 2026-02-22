@@ -1,0 +1,62 @@
+
+spring:
+  application:
+    name: shop-inventory
+  datasource:
+    hikari:
+      jdbc-url: jdbc:mysql://localhost:23306/shop-m
+      username: dev_user
+      password: dev_password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      pool-name: ShopConnectionPool
+      minimum-idle: 10
+      maximum-pool-size: 20
+      idle-timeout: 60000
+      connection-timeout: 30000
+  jpa:
+    show-sql: true
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  kafka:
+    bootstrap-servers: localhost:9094
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 3000
+        retry.backoff.ms: 100
+        partitioner:
+          class: org.apache.kafka.clients.producer.RoundRobinPartitioner
+    consumer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      auto-offset-reset: latest
+      properties:
+        allow.auto.create.topics: false
+        enable.auto.commit: false
+        partition.assignment.strategy: org.apache.kafka.clients.consumer.CooperativeStickyAssignor
+
+shop:
+  kafka:
+    topics:
+      order-created:
+        topic: order-created
+        group-id: order-created-group
+        concurrency: 1
+      order-cancled:
+        topic: order-canceld
+        group-id: order-cancled-group
+        concurrency: 1
+      payment-success:
+        topic: payment-success
+        group-id: payment-success-group
+        concurrency: 1
+      payment-failed:
+        topic: payment-failed
+        group-id: payment-failed-group
+        concurrency: 1

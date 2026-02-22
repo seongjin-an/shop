@@ -24,3 +24,43 @@ services:
       - "15540:5540"
     volumes:
       - ./data/redis-insight:/data
+  kafka:
+    image: confluentinc/cp-kafka:7.5.1 # Apache Kafka 3.5.x = Confluent Platform 7.5.x
+    container_name: kafka
+    ports:
+      - "9092:9092"       # 컨테이너 브로커
+      - "9094:9094"       # 호스트용 PLAINTEXT_HOST
+    environment:
+      # KRaft 필수 설정
+      KAFKA_NODE_ID: 1  # 브로커 노드 ID
+      CLUSTER_ID: 'EpwKlK0lR6qKZW0cGwZz8w'  # 클러스터 고유 식별자
+
+      # 리스너 설정
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093'
+      #      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT'
+
+      # KRaft 모드 설정
+      KAFKA_PROCESS_ROLES: 'broker,controller'  # 브로커와 컨트롤러 역할 통합
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'  # 컨트롤러 쿼럼 설정
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'  # 컨트롤러 통신용 리스너
+
+      # 복제 관련 설정
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    volumes:
+      - ./.data/kafka:/var/lib/kafka/data
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    restart: unless-stopped
+    ports:
+      - '18090:8080'
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=Local-Kafka-Cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    volumes:
+      - ./.data/kafkaui:/etc/kafkaui
+    depends_on:
+      - kafka
