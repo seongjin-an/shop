@@ -3,7 +3,7 @@ package com.ansj.shopproduct.event.service;
 import com.ansj.shopproduct.common.*;
 import com.ansj.shopproduct.event.entity.OutboxEventEntity;
 import com.ansj.shopproduct.event.repository.OutboxEventRepository;
-import com.ansj.shopproduct.inventory.dto.outbound.InventoryReservedEvent;
+import com.ansj.shopproduct.stock.dto.outbound.StockReservedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,11 +21,11 @@ public class OutboxEventService {
     private final JsonUtil jsonUtil;
 
     @Transactional
-    public void inventoryReservedEvent(SagaId sagaId, AggregateId aggregateId) {
+    public void stockReservedEvent(SagaId sagaId, AggregateId aggregateId) {
         EventId eventId = EventId.newId();
-        String aggregateType = "INVENTORY";
+        String aggregateType = "STOCK";
         LocalDateTime now = LocalDateTime.now();
-        InventoryReservedEvent inventoryReservedEvent = InventoryReservedEvent.builder()
+        StockReservedEvent stockReservedEvent = StockReservedEvent.builder()
                 .eventId(eventId)
                 .sagaId(sagaId)
                 .aggregateId(aggregateId)
@@ -33,11 +33,11 @@ public class OutboxEventService {
                 .occurredAt(now)
                 .build();
 
-        String payload = jsonUtil.toJson(inventoryReservedEvent).orElseThrow(RuntimeException::new);
+        String payload = jsonUtil.toJson(stockReservedEvent).orElseThrow(RuntimeException::new);
         OutboxEventEntity outboxEventEntity = OutboxEventEntity.builder()
                 .eventId(eventId.id())
                 .sagaId(sagaId.id())
-                .eventType(MessageType.INVENTORY_RESERVED)
+                .eventType(MessageType.STOCK_RESERVED)
                 .aggregateId(aggregateId.id())
                 .aggregateType(aggregateType)
                 .payload(payload)

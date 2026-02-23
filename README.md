@@ -4,18 +4,18 @@
 - kafka
 - redis
 
-### shop-m
+### shop-user
 - user and authentication service
 - user session managed by redis session store 
 
-### shop-f
+### shop-frontend
 - frontend
 
 ### shop-order
 - ...
 
 ### shop-product
-- product & inventory service
+- product & stock service
 
 ---
 ### message flow
@@ -23,12 +23,12 @@
 Order Service
   publish → ORDER_CREATED
 
-Inventory Service
+Stock Service
   consume → ORDER_CREATED
-  publish → INVENTORY_RESERVED / INVENTORY_FAILED
+  publish → STOCK_RESERVED / STOCK_FAILED
 
 Order Service
-  consume → INVENTORY_RESERVED / INVENTORY_FAILED
+  consume → STOCK_RESERVED / STOCK_FAILED
   publish → PAYMENT_REQUESTED
 
 Payment Service
@@ -48,5 +48,5 @@ $ docker exec -it kafka kafka-topics --create --topic order-created --bootstrap-
 Created topic order-created.
 ```
 
-3. run shop-f, shop-m, ...
+3. run shop-frontend, shop-user, ...
 

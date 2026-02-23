@@ -1,7 +1,7 @@
 package com.ansj.shopproduct.common;
 
 import com.ansj.shopproduct.product.dto.CreateProductDto;
-import com.ansj.shopproduct.usecase.ProductInventoryUseCase;
+import com.ansj.shopproduct.usecase.ProductStockUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 @Component
 public class ApplicationInitializer implements ApplicationRunner {
 
-    private final ProductInventoryUseCase productInventoryUseCase;
+    private final ProductStockUseCase productStockUseCase;
 
 
     @Override
@@ -29,6 +29,6 @@ public class ApplicationInitializer implements ApplicationRunner {
                 .productPrice(new BigDecimal(50000))
                 .productDesc("비타민A 상품")
                 .build();
-        productInventoryUseCase.createProductWithInventory(product, 10000);
+        productStockUseCase.createProductWithStock(product, 10000);
     }
 }

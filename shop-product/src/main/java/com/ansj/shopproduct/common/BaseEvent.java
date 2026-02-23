@@ -1,6 +1,6 @@
 package com.ansj.shopproduct.common;
 
-import com.ansj.shopproduct.inventory.dto.inbound.OrderCreatedEvent;
+import com.ansj.shopproduct.stock.dto.inbound.OrderCreatedEvent;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
