@@ -48,9 +48,9 @@ shop:
         topic: order-created
         group-id: order-created-group
         concurrency: 1
-      order-cancled:
-        topic: order-canceld
-        group-id: order-cancled-group
+      order-canceled:
+        topic: order-canceled
+        group-id: order-canceled-group
         concurrency: 1
       payment-success:
         topic: payment-success
