@@ -1,4 +1,4 @@
-package com.ansj.shopproduct.event.entity;
+package com.ansj.shopproduct.box.entity;
 
 import com.ansj.shopproduct.common.UuidUtils;
 import jakarta.persistence.*;

@@ -19,6 +19,7 @@
 
 ---
 ### message flow
+#### order
 ```text
 Order Service
   publish → ORDER_CREATED
@@ -38,14 +39,23 @@ Payment Service
 Order Service
   consume → PAYMENT_COMPLETED / PAYMENT_FAILED
 ```
+#### product
+````text
+Product Service
+  publish -> PRODUCT_CREATED
+
+Stock Service
+  consume -> PRODUCT_CREATED
+````
 
 ### SETUP & RUN
 1. run docker container first
 
 2. kafka topics
 ```bash
+$ docker exec -it kafka kafka-topics --create --topic product-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+
 $ docker exec -it kafka kafka-topics --create --topic order-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-Created topic order-created.
 ```
 
 3. run shop-frontend, shop-user, ...

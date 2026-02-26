@@ -1,7 +1,7 @@
-package com.ansj.shopproduct.event.entity;
+package com.ansj.shopstock.box.entity;
 
 
-import com.ansj.shopproduct.common.UuidUtils;
+import com.ansj.shopstock.common.UuidUtils;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -15,9 +15,9 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(
-        name = "product_outbox_event",
+        name = "stock_outbox_event",
         indexes = {
-                @Index(name = "idx_product_outbox_event_saga_id", columnList = "saga_id")
+                @Index(name = "idx_stock_outbox_event_saga_id", columnList = "saga_id")
         }
 )
 public class OutboxEventEntity {
@@ -43,7 +43,7 @@ public class OutboxEventEntity {
     private UUID aggregateId;      // ex) orderId
 
     @Lob
-    @Column(name = "payload", nullable = false)
+    @Column(name = "payload", nullable = false, columnDefinition = "LONGTEXT")
     private String payload;          // JSON
 
     //@Enumerated(EnumType.STRING) // 추후에 수정하자

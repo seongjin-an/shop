@@ -1,6 +1,6 @@
 package com.ansj.shopproduct.common;
 
-import com.ansj.shopproduct.stock.dto.inbound.OrderCreatedEvent;
+import com.ansj.shopproduct.event.ProductCreatedEvent;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Getter
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "eventType")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = OrderCreatedEvent.class, name = MessageType.ORDER_CREATED),
+        @JsonSubTypes.Type(value = ProductCreatedEvent.class, name = MessageType.PRODUCT_CREATED),
 })
 public abstract class BaseEvent {
     private final String eventType;

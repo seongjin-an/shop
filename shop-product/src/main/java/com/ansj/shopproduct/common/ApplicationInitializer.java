@@ -20,7 +20,7 @@ public class ApplicationInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        initProduct();
+        //initProduct();
     }
 
     private void initProduct() {
@@ -29,6 +29,6 @@ public class ApplicationInitializer implements ApplicationRunner {
                 .productPrice(new BigDecimal(50000))
                 .productDesc("비타민A 상품")
                 .build();
-        productStockUseCase.createProductWithStock(product, 10000);
+        productStockUseCase.createProductWithStock(product);
     }
 }

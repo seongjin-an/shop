@@ -1,10 +1,10 @@
-package com.ansj.shopstock.event.service;
+package com.ansj.shopstock.box.service;
 
 import com.ansj.shopstock.common.BaseEvent;
 import com.ansj.shopstock.common.EventId;
 import com.ansj.shopstock.common.JsonUtil;
-import com.ansj.shopstock.event.entity.InboxEventEntity;
-import com.ansj.shopstock.event.repository.InboxEventRepository;
+import com.ansj.shopstock.box.entity.InboxEventEntity;
+import com.ansj.shopstock.box.repository.InboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -1,7 +1,6 @@
-package com.ansj.shopproduct.consumer;
+package com.ansj.shopproduct.kafka;
 
 import com.ansj.shopproduct.common.JsonUtil;
-import com.ansj.shopproduct.stock.dto.inbound.OrderCreatedEvent;
 import com.ansj.shopproduct.usecase.ProductStockUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,8 +26,8 @@ public class StockKafkaConsumer {
     )
     public void orderCreated(ConsumerRecord<String, String> consumerRecord, Acknowledgment acknowledgment) {
         try {
-            jsonUtil.fromJson(consumerRecord.value(), OrderCreatedEvent.class)
-                    .ifPresent(productStockUseCase::processOrder);
+//            jsonUtil.fromJson(consumerRecord.value(), OrderCreatedEvent.class)
+//                    .ifPresent(productStockUseCase::processOrder);
         } catch (Exception e) {
             log.error("handling order-created event error. cause: {}", e.getMessage(), e);
         } finally {

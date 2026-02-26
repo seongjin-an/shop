@@ -36,13 +36,6 @@ public class StockService {
     }
 
     @Transactional
-    public void create(List<StockItem> stockItems) {
-        for (StockItem stockItem : stockItems) {
-            createStock(stockItem.getProductId(), stockItem.getQuantity());
-        }
-    }
-
-    @Transactional
     public void createStock(UUID productId, int quantity) {
         StockEntity stock = StockEntity.builder()
                 .productId(productId)
@@ -80,10 +73,10 @@ public class StockService {
     )
     @Transactional
     public void reserve(List<StockItem> items) {
-        Map<UUID, Integer> itemMap = items.stream()
+        Map<AggregateId, Integer> itemMap = items.stream()
                 .collect(Collectors.toMap(StockItem::getProductId, StockItem::getQuantity));
 
-        List<StockEntity> inventories = stockRepository.findByProductIdIn(itemMap.keySet());
+        List<StockEntity> inventories = stockRepository.findByProductIdIn(itemMap.keySet().stream().map(AggregateId::id).toList());
         for (StockEntity stockEntity : inventories) {
             stockEntity.reserve(itemMap.get(stockEntity.getProductId()));
         }

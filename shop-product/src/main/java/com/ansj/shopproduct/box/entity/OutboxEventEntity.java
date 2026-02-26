@@ -1,7 +1,7 @@
-package com.ansj.shopstock.event.entity;
+package com.ansj.shopproduct.box.entity;
 
 
-import com.ansj.shopstock.common.UuidUtils;
+import com.ansj.shopproduct.common.UuidUtils;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -15,9 +15,9 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(
-        name = "stock_outbox_event",
+        name = "product_outbox_event",
         indexes = {
-                @Index(name = "idx_stock_outbox_event_saga_id", columnList = "saga_id")
+                @Index(name = "idx_product_outbox_event_saga_id", columnList = "saga_id")
         }
 )
 public class OutboxEventEntity {

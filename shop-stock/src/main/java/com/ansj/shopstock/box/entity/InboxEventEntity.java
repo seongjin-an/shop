@@ -1,4 +1,4 @@
-package com.ansj.shopstock.event.entity;
+package com.ansj.shopstock.box.entity;
 
 import com.ansj.shopstock.common.UuidUtils;
 import jakarta.persistence.*;
@@ -40,7 +40,7 @@ public class InboxEventEntity {
     private String aggregateType;
 
     @Lob
-    @Column(name = "payload", nullable = false)
+    @Column(name = "payload", nullable = false, columnDefinition = "LONGTEXT")
     private String payload;
 
     @Column(name = "processed_at", nullable = false)

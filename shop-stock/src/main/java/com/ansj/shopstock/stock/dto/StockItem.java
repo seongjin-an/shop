@@ -1,5 +1,6 @@
 package com.ansj.shopstock.stock.dto;
 
+import com.ansj.shopstock.common.AggregateId;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,6 +11,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @Data
 public class StockItem {
-    private UUID productId;
+    private AggregateId productId;
     private int quantity;
 }

@@ -1,8 +1,8 @@
-package com.ansj.shopstock.event.service;
+package com.ansj.shopstock.box.service;
 
 import com.ansj.shopstock.common.*;
-import com.ansj.shopstock.event.entity.OutboxEventEntity;
-import com.ansj.shopstock.event.repository.OutboxEventRepository;
+import com.ansj.shopstock.box.entity.OutboxEventEntity;
+import com.ansj.shopstock.box.repository.OutboxEventRepository;
 import com.ansj.shopstock.stock.dto.outbound.StockReservedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

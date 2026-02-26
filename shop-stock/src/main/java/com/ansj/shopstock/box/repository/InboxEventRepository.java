@@ -1,6 +1,6 @@
-package com.ansj.shopproduct.event.repository;
+package com.ansj.shopstock.box.repository;
 
-import com.ansj.shopproduct.event.entity.InboxEventEntity;
+import com.ansj.shopstock.box.entity.InboxEventEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.UUID;

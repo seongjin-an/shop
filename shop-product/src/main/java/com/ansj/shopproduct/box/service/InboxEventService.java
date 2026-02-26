@@ -1,16 +1,14 @@
-package com.ansj.shopproduct.event.service;
+package com.ansj.shopproduct.box.service;
 
 import com.ansj.shopproduct.common.BaseEvent;
 import com.ansj.shopproduct.common.EventId;
 import com.ansj.shopproduct.common.JsonUtil;
-import com.ansj.shopproduct.event.entity.InboxEventEntity;
-import com.ansj.shopproduct.event.repository.InboxEventRepository;
+import com.ansj.shopproduct.box.entity.InboxEventEntity;
+import com.ansj.shopproduct.box.repository.InboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor

@@ -1,7 +1,7 @@
 package com.ansj.shopstock.usecase;
 
-import com.ansj.shopstock.event.service.InboxEventService;
-import com.ansj.shopstock.event.service.OutboxEventService;
+import com.ansj.shopstock.box.service.InboxEventService;
+import com.ansj.shopstock.stock.dto.StockItem;
 import com.ansj.shopstock.stock.dto.inbound.ProductCreatedEvent;
 import com.ansj.shopstock.stock.service.StockService;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,6 @@ public class StockUseCase {
 
     private final StockService stockService;
     private final InboxEventService inboxEventService;
-    private final OutboxEventService outboxEventService;
 
     
     public void processIncreaseStockEvent(ProductCreatedEvent productCreatedEvent) {
@@ -24,10 +23,9 @@ public class StockUseCase {
             return;
         }
 
-        stockService.create(productCreatedEvent.getItems());
+        StockItem item = productCreatedEvent.getItem();
+        stockService.createStock(item.getProductId().id(), item.getQuantity());
 
         inboxEventService.createInboxEvent(productCreatedEvent);
-
-        //outboxEventService.stockReservedEvent(productCreatedEvent.getSagaId(), productCreatedEvent.getAggregateId());
     }
 }

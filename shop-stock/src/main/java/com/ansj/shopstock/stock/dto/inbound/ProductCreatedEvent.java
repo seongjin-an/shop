@@ -7,12 +7,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 public class ProductCreatedEvent extends BaseEvent {
 
-    private final List<StockItem> items;
+    private final StockItem item;
 
     @JsonCreator
     public ProductCreatedEvent(
@@ -21,8 +20,8 @@ public class ProductCreatedEvent extends BaseEvent {
             @JsonProperty("aggregateId") AggregateId aggregateId,
             @JsonProperty("aggregateType") String aggregateType,
             @JsonProperty("occurredAt") LocalDateTime occurredAt,
-            @JsonProperty("items") List<StockItem> items) {
+            @JsonProperty("item") StockItem item) {
         super(MessageType.PRODUCT_CREATED, eventId, sagaId, aggregateId, aggregateType, occurredAt);
-        this.items = items;
+        this.item = item;
     }
 }
