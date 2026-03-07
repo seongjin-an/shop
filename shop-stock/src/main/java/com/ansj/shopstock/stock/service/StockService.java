@@ -73,10 +73,15 @@ public class StockService {
     )
     @Transactional
     public void reserve(List<StockItem> items) {
-        Map<AggregateId, Integer> itemMap = items.stream()
-                .collect(Collectors.toMap(StockItem::getProductId, StockItem::getQuantity));
+        Map<UUID, Integer> itemMap = items.stream()
+                .collect(Collectors.toMap(item -> item.getProductId().id(), StockItem::getQuantity));
 
-        List<StockEntity> inventories = stockRepository.findByProductIdIn(itemMap.keySet().stream().map(AggregateId::id).toList());
+        List<StockEntity> inventories = stockRepository.findByProductIdIn(itemMap.keySet());
+
+        if (inventories.size() != itemMap.size()) {
+            throw new IllegalStateException("재고 정보가 없는 상품이 포함되어 있습니다.");
+        }
+
         for (StockEntity stockEntity : inventories) {
             stockEntity.reserve(itemMap.get(stockEntity.getProductId()));
         }

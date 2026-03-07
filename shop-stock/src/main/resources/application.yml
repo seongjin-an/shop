@@ -47,3 +47,11 @@ shop:
         topic: product-created
         group-id: product-created-group
         concurrency: 1
+      order-created:
+        topic: order-created
+        group-id: order-created-stock-group
+        concurrency: 1
+      stock-reserved:
+        topic: stock-reserved
+      stock-reserve-failed:
+        topic: stock-reserve-failed

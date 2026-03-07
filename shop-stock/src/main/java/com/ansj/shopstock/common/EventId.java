@@ -1,5 +1,6 @@
 package com.ansj.shopstock.common;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 import java.util.Objects;
@@ -14,6 +15,7 @@ public record EventId(@JsonValue UUID id) {
         return new EventId(UuidUtils.createV7());
     }
 
+    @JsonCreator
     public static EventId from(String value) {
         return new EventId(UUID.fromString(value));
     }

@@ -1,16 +1,21 @@
 package com.ansj.shopproduct.common;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 import java.util.Objects;
 import java.util.UUID;
 
-public record SagaId(UUID id) {
+public record SagaId(@JsonValue UUID id) {
     public SagaId {
         Objects.requireNonNull(id, "SagaId cannot be null");
     }
+
     public static SagaId newId() {
         return new SagaId(UuidUtils.createV7());
     }
 
+    @JsonCreator
     public static SagaId from(String value) {
         return new SagaId(UUID.fromString(value));
     }
