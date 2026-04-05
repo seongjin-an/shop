@@ -8,8 +8,6 @@ import { createOrder } from "@/services/orderService";
 import { Product } from "@/types/product";
 import { CreateOrderItemRequest } from "@/types/order";
 
-const TEST_USER_ID = "00000000-0000-0000-0000-000000000001";
-
 interface OrderModal {
     product: Product;
     quantity: number;
@@ -60,7 +58,7 @@ export default function Home() {
                 quantity: modal.quantity,
             };
             const orderId = await createOrder({
-                userId: TEST_USER_ID,
+                userId: user?.userId || 0,
                 deliveryAddress: modal.address,
                 items: [item],
             });

@@ -37,8 +37,8 @@ public class OrderEntity {
     private UUID sagaId;
 
     /** 사용자 서비스의 사용자 ID. FK 강제하지 않음 */
-    @Column(name = "user_id", nullable = false, columnDefinition = "BINARY(16)")
-    private UUID userId;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "order_status", nullable = false)

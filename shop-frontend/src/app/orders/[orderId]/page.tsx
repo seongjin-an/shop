@@ -4,20 +4,30 @@ import { useParams } from "next/navigation";
 import { getOrder } from "@/services/orderService";
 import { Order, OrderStatus } from "@/types/order";
 
-const SAGA_STEPS: { status: OrderStatus; label: string; desc: string }[] = [
-    { status: "PENDING",        label: "주문 접수",    desc: "재고 예약 요청 중" },
-    { status: "STOCK_RESERVED", label: "재고 예약 완료", desc: "결제 요청 중" },
-    { status: "COMPLETED",      label: "주문 완료",    desc: "결제 성공" },
+// 4단계 Saga 시각화
+// currentStep 은 "현재 활성 단계 인덱스"를 반환한다.
+// STOCK_RESERVED 는 재고 예약(1)이 완료됐고 결제(2)가 진행 중인 상태이므로 2를 반환.
+// COMPLETED 는 모든 단계(4)가 완료된 상태이므로 4를 반환.
+const SAGA_STEPS = [
+    { label: "주문 접수",   desc: "주문이 접수되었습니다" },
+    { label: "재고 예약",   desc: "재고를 확인 중입니다" },
+    { label: "결제 처리",   desc: "PG사 결제 처리 중입니다" },
+    { label: "주문 완료",   desc: "주문이 완료되었습니다" },
 ];
 
 const TERMINAL_FAILED: Record<string, { label: string; color: string; desc: string }> = {
-    STOCK_FAILED:   { label: "재고 부족",    color: "#dc2626", desc: "재고가 부족하여 주문이 취소되었습니다." },
-    PAYMENT_FAILED: { label: "결제 실패",    color: "#d97706", desc: "결제에 실패했습니다. 재고 복구 중..." },
-    CANCELLED:      { label: "주문 취소",    color: "#6b7280", desc: "보상 트랜잭션 완료. 재고가 복구되었습니다." },
+    STOCK_FAILED:   { label: "재고 부족",  color: "#dc2626", desc: "재고가 부족하여 주문이 취소되었습니다." },
+    PAYMENT_FAILED: { label: "결제 실패",  color: "#d97706", desc: "결제에 실패했습니다. 재고 복구 중..." },
+    CANCELLED:      { label: "주문 취소",  color: "#6b7280", desc: "보상 트랜잭션 완료. 재고가 복구되었습니다." },
 };
 
 function stepIndex(status: OrderStatus): number {
-    return SAGA_STEPS.findIndex((s) => s.status === status);
+    switch (status) {
+        case "PENDING":        return 0;
+        case "STOCK_RESERVED": return 2; // 재고(1) 완료, 결제(2) 진행 중
+        case "COMPLETED":      return 4; // 전체 완료
+        default:               return -1;
+    }
 }
 
 export default function OrderStatusPage() {
@@ -36,6 +46,7 @@ export default function OrderStatusPage() {
             if (["COMPLETED", "STOCK_FAILED", "CANCELLED"].includes(data.orderStatus)) {
                 stopPolling();
             }
+            // PAYMENT_FAILED 는 즉시 CANCELLED 로 전이되므로 폴링을 짧게 유지
         } catch (e) {
             setError("주문 정보를 불러오지 못했습니다.");
         }
@@ -125,7 +136,7 @@ export default function OrderStatusPage() {
                                         const isDone = currentStep > i;
                                         const isActive = currentStep === i;
                                         return (
-                                            <div key={step.status} className={`step ${isDone ? 'done' : ''}`}>
+                                            <div key={i} className={`step ${isDone ? 'done' : ''}`}>
                                                 <div className={`step-dot ${isDone ? 'done' : isActive ? 'active' : ''}`}>
                                                     {isDone ? '✓' : i + 1}
                                                 </div>

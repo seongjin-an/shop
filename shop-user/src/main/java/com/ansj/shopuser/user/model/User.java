@@ -1,6 +1,6 @@
 package com.ansj.shopuser.user.model;
 
-import com.ansj.shopuser.common.CustomUserDetails;
+import com.ansj.shopuser.user.model.CustomUserDetails;
 import com.ansj.shopuser.user.entity.UserEntity;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;

@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 public class Orders {
     private UUID orderId;
     private UUID sagaId;
-    private UUID userId;
+    private Long userId;
     private OrderStatus orderStatus;
     private BigDecimal totalAmount;
     private String deliveryAddress;

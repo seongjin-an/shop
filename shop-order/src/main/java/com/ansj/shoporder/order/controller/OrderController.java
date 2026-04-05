@@ -3,7 +3,7 @@ package com.ansj.shoporder.order.controller;
 import com.ansj.shoporder.order.dto.CreateOrderRequest;
 import com.ansj.shoporder.order.model.Orders;
 import com.ansj.shoporder.order.service.OrderService;
-import com.ansj.shoporder.order.usecase.CreateOrderUseCase;
+import com.ansj.shoporder.usecase.CreateOrderUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

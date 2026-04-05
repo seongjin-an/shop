@@ -59,3 +59,13 @@ shop:
         concurrency: 1
       payment-requested:
         topic: payment-requested
+      payment-success:
+        topic: payment-success
+        group-id: payment-success-order-group
+        concurrency: 1
+      payment-failed:
+        topic: payment-failed
+        group-id: payment-failed-order-group
+        concurrency: 1
+      order-cancelled:
+        topic: order-canceled

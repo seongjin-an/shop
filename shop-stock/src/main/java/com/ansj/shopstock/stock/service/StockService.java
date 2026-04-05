@@ -66,6 +66,30 @@ public class StockService {
                 .orElseThrow(() -> new IllegalArgumentException("재고가 존재하지 않습니다."));
     }
 
+    @Retryable(retryFor = {ObjectOptimisticLockingFailureException.class}, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
+    @Transactional
+    public void confirmReservations(List<StockItem> items) {
+        Map<UUID, Integer> itemMap = items.stream()
+                .collect(Collectors.toMap(item -> item.getProductId().id(), StockItem::getQuantity));
+
+        List<StockEntity> inventories = stockRepository.findByProductIdIn(itemMap.keySet());
+        for (StockEntity stock : inventories) {
+            stock.confirmReservation(itemMap.get(stock.getProductId()));
+        }
+    }
+
+    @Retryable(retryFor = {ObjectOptimisticLockingFailureException.class}, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
+    @Transactional
+    public void cancelReservations(List<StockItem> items) {
+        Map<UUID, Integer> itemMap = items.stream()
+                .collect(Collectors.toMap(item -> item.getProductId().id(), StockItem::getQuantity));
+
+        List<StockEntity> inventories = stockRepository.findByProductIdIn(itemMap.keySet());
+        for (StockEntity stock : inventories) {
+            stock.cancelReservation(itemMap.get(stock.getProductId()));
+        }
+    }
+
     @Retryable(
             retryFor = {ObjectOptimisticLockingFailureException.class}, // 낙관적 락 예외 발생 시
             maxAttempts = 3, // 최대 3번 시도

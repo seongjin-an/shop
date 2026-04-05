@@ -19,14 +19,14 @@ TOPICS=(
   "stock-reserved"
   "stock-reserve-failed"
 
-  # shop-order → payment (추후)
+  # shop-order → shop-payment
   "payment-requested"
 
-  # payment → shop-order / shop-stock (추후)
+  # shop-payment → shop-order, shop-stock
   "payment-success"
   "payment-failed"
 
-  # shop-order → shop-stock (보상 트랜잭션, 추후)
+  # shop-order → shop-stock (보상 트랜잭션)
   "order-canceled"
 )
 

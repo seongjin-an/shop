@@ -34,7 +34,7 @@ export interface CreateOrderItemRequest {
 }
 
 export interface CreateOrderRequest {
-    userId: string;
+    userId: number;
     deliveryAddress: string;
     items: CreateOrderItemRequest[];
 }

@@ -55,3 +55,11 @@ shop:
         topic: stock-reserved
       stock-reserve-failed:
         topic: stock-reserve-failed
+      payment-success:
+        topic: payment-success
+        group-id: payment-success-stock-group
+        concurrency: 1
+      order-cancelled:
+        topic: order-canceled
+        group-id: order-cancelled-stock-group
+        concurrency: 1

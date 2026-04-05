@@ -1,7 +1,7 @@
 package com.ansj.shopuser.config;
 
-import com.ansj.shopuser.common.CustomUserDetails;
-import com.ansj.shopuser.common.LoginRequest;
+import com.ansj.shopuser.user.model.CustomUserDetails;
+import com.ansj.shopuser.user.dto.LoginRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

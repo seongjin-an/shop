@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Getter
 public class CreateOrderRequest {
-    private UUID userId;
+    private Long userId;
     private String deliveryAddress;
     private List<CreateOrderItemRequest> items;
 }

@@ -1,6 +1,10 @@
 package com.ansj.shoporder.common;
 
-import com.ansj.shoporder.order.event.OrderCreatedEvent;
+import com.ansj.shoporder.order.event.inbound.PaymentFailedEvent;
+import com.ansj.shoporder.order.event.inbound.PaymentSuccessEvent;
+import com.ansj.shoporder.order.event.inbound.StockReserveFailedEvent;
+import com.ansj.shoporder.order.event.inbound.StockReservedEvent;
+import com.ansj.shoporder.order.event.outbound.OrderCreatedEvent;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
@@ -8,9 +12,13 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 
 @Getter
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "eventType")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "eventType", visible = true)
 @JsonSubTypes({
         @JsonSubTypes.Type(value = OrderCreatedEvent.class, name = MessageType.ORDER_CREATED),
+        @JsonSubTypes.Type(value = StockReservedEvent.class, name = MessageType.STOCK_RESERVED),
+        @JsonSubTypes.Type(value = StockReserveFailedEvent.class, name = MessageType.STOCK_RESERVE_FAILED),
+        @JsonSubTypes.Type(value = PaymentSuccessEvent.class, name = MessageType.PAYMENT_SUCCESS),
+        @JsonSubTypes.Type(value = PaymentFailedEvent.class, name = MessageType.PAYMENT_FAILED),
 })
 public abstract class BaseEvent {
     private final String eventType;

@@ -2,7 +2,7 @@ package com.ansj.shopstock.usecase;
 
 import com.ansj.shopstock.box.service.InboxEventService;
 import com.ansj.shopstock.stock.dto.StockItem;
-import com.ansj.shopstock.stock.dto.inbound.ProductCreatedEvent;
+import com.ansj.shopstock.stock.event.inbound.ProductCreatedEvent;
 import com.ansj.shopstock.stock.service.StockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

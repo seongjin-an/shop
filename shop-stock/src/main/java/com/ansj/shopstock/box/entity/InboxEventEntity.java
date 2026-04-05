@@ -32,7 +32,7 @@ public class InboxEventEntity {
     @Column(name = "saga_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID sagaId;
 
-    @Column(name = "aggregate_id", nullable = false, unique = true, columnDefinition = "BINARY(16)")
+    @Column(name = "aggregate_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID aggregateId;
 
     // ORDER, PAYMENT

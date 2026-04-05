@@ -1,6 +1,6 @@
 package com.ansj.shopuser.user.controller;
 
-import com.ansj.shopuser.common.CustomUserDetails;
+import com.ansj.shopuser.user.model.CustomUserDetails;
 import com.ansj.shopuser.user.dto.SignUpRequest;
 import com.ansj.shopuser.user.model.User;
 import com.ansj.shopuser.user.service.UserService;

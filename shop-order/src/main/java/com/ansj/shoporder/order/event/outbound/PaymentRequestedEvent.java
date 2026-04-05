@@ -12,7 +12,7 @@ import java.util.UUID;
 public class PaymentRequestedEvent extends BaseEvent {
 
     /** 결제 대상 사용자 */
-    private final UUID userId;
+    private final Long userId;
 
     /** 결제 금액 */
     private final BigDecimal totalAmount;
@@ -20,7 +20,7 @@ public class PaymentRequestedEvent extends BaseEvent {
     @Builder
     public PaymentRequestedEvent(EventId eventId, SagaId sagaId, AggregateId aggregateId,
                                   String aggregateType, LocalDateTime occurredAt,
-                                  UUID userId, BigDecimal totalAmount) {
+                                  Long userId, BigDecimal totalAmount) {
         super(MessageType.PAYMENT_REQUESTED, eventId, sagaId, aggregateId, aggregateType, occurredAt);
         this.userId = userId;
         this.totalAmount = totalAmount;
