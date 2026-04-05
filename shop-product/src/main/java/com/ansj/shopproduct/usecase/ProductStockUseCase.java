@@ -11,6 +11,7 @@ import com.ansj.shopproduct.product.event.outbound.StockItem;
 import com.ansj.shopproduct.product.dto.CreateProductDto;
 import com.ansj.shopproduct.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -38,21 +39,26 @@ public class ProductStockUseCase {
     @Transactional
     public AggregateId createProductWithStock(CreateProductDto dto) {
         AggregateId productId = productService.createProduct(dto);
+        SagaId sagaId = SagaId.newId();
+        MDC.put("sagaId", sagaId.toString());
+        try {
+            StockItem stockItem = StockItem.of(productId, dto.getQuantity());
 
-        StockItem stockItem = StockItem.of(productId, dto.getQuantity());
+            // outbox event 는 나중에 적용
+            ProductCreatedEvent product = new ProductCreatedEvent(
+                    EventId.newId(),
+                    sagaId,
+                    productId,
+                    "PRODUCT",
+                    LocalDateTime.now(),
+                    stockItem);
 
-        // outbox event 는 나중에 적용
-        ProductCreatedEvent product = new ProductCreatedEvent(
-                EventId.newId(),
-                SagaId.newId(),
-                productId,
-                "PRODUCT",
-                LocalDateTime.now(),
-                stockItem);
+            jsonUtil.toJson(product)
+                    .ifPresent(json -> kafkaTemplate.send(productCreatedTopic, json));
 
-        jsonUtil.toJson(product)
-                        .ifPresent(json -> kafkaTemplate.send(productCreatedTopic, json));
-
-        return productId;
+            return productId;
+        } finally {
+            MDC.clear();
+        }
     }
 }

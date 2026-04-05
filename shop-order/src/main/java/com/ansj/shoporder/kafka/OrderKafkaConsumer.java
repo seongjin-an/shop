@@ -10,6 +10,7 @@ import com.ansj.shoporder.usecase.StockReserveResultUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,14 @@ public class OrderKafkaConsumer {
     public void onStockReserved(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
         try {
             jsonUtil.fromJson(record.value(), StockReservedEvent.class)
-                    .ifPresent(stockReserveResultUseCase::onStockReserved);
+                    .ifPresent(event -> {
+                        MDC.put("sagaId", event.getSagaId().toString());
+                        stockReserveResultUseCase.onStockReserved(event);
+                    });
         } catch (Exception e) {
             log.error("stock-reserved 처리 중 오류. cause: {}", e.getMessage(), e);
         } finally {
+            MDC.clear();
             acknowledgment.acknowledge();
         }
     }
@@ -47,10 +52,14 @@ public class OrderKafkaConsumer {
     public void onStockReserveFailed(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
         try {
             jsonUtil.fromJson(record.value(), StockReserveFailedEvent.class)
-                    .ifPresent(stockReserveResultUseCase::onStockReserveFailed);
+                    .ifPresent(event -> {
+                        MDC.put("sagaId", event.getSagaId().toString());
+                        stockReserveResultUseCase.onStockReserveFailed(event);
+                    });
         } catch (Exception e) {
             log.error("stock-reserve-failed 처리 중 오류. cause: {}", e.getMessage(), e);
         } finally {
+            MDC.clear();
             acknowledgment.acknowledge();
         }
     }
@@ -63,10 +72,14 @@ public class OrderKafkaConsumer {
     public void onPaymentSuccess(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
         try {
             jsonUtil.fromJson(record.value(), PaymentSuccessEvent.class)
-                    .ifPresent(paymentResultUseCase::onPaymentSuccess);
+                    .ifPresent(event -> {
+                        MDC.put("sagaId", event.getSagaId().toString());
+                        paymentResultUseCase.onPaymentSuccess(event);
+                    });
         } catch (Exception e) {
             log.error("payment-success 처리 중 오류. cause: {}", e.getMessage(), e);
         } finally {
+            MDC.clear();
             acknowledgment.acknowledge();
         }
     }
@@ -79,10 +92,14 @@ public class OrderKafkaConsumer {
     public void onPaymentFailed(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
         try {
             jsonUtil.fromJson(record.value(), PaymentFailedEvent.class)
-                    .ifPresent(paymentResultUseCase::onPaymentFailed);
+                    .ifPresent(event -> {
+                        MDC.put("sagaId", event.getSagaId().toString());
+                        paymentResultUseCase.onPaymentFailed(event);
+                    });
         } catch (Exception e) {
             log.error("payment-failed 처리 중 오류. cause: {}", e.getMessage(), e);
         } finally {
+            MDC.clear();
             acknowledgment.acknowledge();
         }
     }

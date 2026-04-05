@@ -11,6 +11,7 @@ import com.ansj.shoporder.order.model.Orders;
 import com.ansj.shoporder.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -42,26 +43,30 @@ public class CreateOrderUseCase {
      */
     public UUID createOrder(CreateOrderRequest request) {
         Orders order = orderService.createOrder(request);
+        MDC.put("sagaId", order.getSagaId().toString());
+        try {
+            List<OrderEventItem> eventItems = order.getItems().stream()
+                    .map(item -> new OrderEventItem(item.getProductId(), item.getQuantity()))
+                    .toList();
 
-        List<OrderEventItem> eventItems = order.getItems().stream()
-                .map(item -> new OrderEventItem(item.getProductId(), item.getQuantity()))
-                .toList();
+            OrderCreatedEvent event = new OrderCreatedEvent(
+                    EventId.newId(),
+                    SagaId.from(order.getSagaId()),
+                    AggregateId.from(order.getOrderId()),
+                    "ORDER",
+                    LocalDateTime.now(),
+                    eventItems
+            );
 
-        OrderCreatedEvent event = new OrderCreatedEvent(
-                EventId.newId(),
-                SagaId.from(order.getSagaId()),
-                AggregateId.from(order.getOrderId()),
-                "ORDER",
-                LocalDateTime.now(),
-                eventItems
-        );
+            jsonUtil.toJson(event)
+                    .ifPresentOrElse(
+                            json -> kafkaTemplate.send(orderCreatedTopic, order.getSagaId().toString(), json),
+                            () -> log.error("order-created 이벤트 직렬화 실패. orderId={}", order.getOrderId())
+                    );
 
-        jsonUtil.toJson(event)
-                .ifPresentOrElse(
-                        json -> kafkaTemplate.send(orderCreatedTopic, order.getSagaId().toString(), json),
-                        () -> log.error("order-created 이벤트 직렬화 실패. orderId={}", order.getOrderId())
-                );
-
-        return order.getOrderId();
+            return order.getOrderId();
+        } finally {
+            MDC.clear();
+        }
     }
 }

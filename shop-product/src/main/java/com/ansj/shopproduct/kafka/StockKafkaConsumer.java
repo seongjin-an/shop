@@ -5,6 +5,7 @@ import com.ansj.shopproduct.usecase.ProductStockUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class StockKafkaConsumer {
         } catch (Exception e) {
             log.error("handling order-created event error. cause: {}", e.getMessage(), e);
         } finally {
+            MDC.clear();
             acknowledgment.acknowledge();
         }
 

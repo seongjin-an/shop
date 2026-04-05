@@ -6,6 +6,7 @@ import com.ansj.shoppayment.usecase.ProcessPaymentUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
@@ -26,10 +27,14 @@ public class PaymentKafkaConsumer {
     public void onPaymentRequested(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
         try {
             jsonUtil.fromJson(record.value(), PaymentRequestedEvent.class)
-                    .ifPresent(processPaymentUseCase::process);
+                    .ifPresent(event -> {
+                        MDC.put("sagaId", event.getSagaId().toString());
+                        processPaymentUseCase.process(event);
+                    });
         } catch (Exception e) {
             log.error("payment-requested 처리 중 오류. cause: {}", e.getMessage(), e);
         } finally {
+            MDC.clear();
             acknowledgment.acknowledge();
         }
     }
