@@ -66,7 +66,7 @@ public class StockService {
                 .orElseThrow(() -> new IllegalArgumentException("재고가 존재하지 않습니다."));
     }
 
-    @Retryable(retryFor = {ObjectOptimisticLockingFailureException.class}, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
+    @Retryable(retryFor = {ObjectOptimisticLockingFailureException.class}, maxAttempts = 5, backoff = @Backoff(delay = 50, multiplier = 2, maxDelay = 500))
     @Transactional
     public void confirmReservations(List<StockItem> items) {
         Map<UUID, Integer> itemMap = items.stream()
@@ -78,7 +78,7 @@ public class StockService {
         }
     }
 
-    @Retryable(retryFor = {ObjectOptimisticLockingFailureException.class}, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
+    @Retryable(retryFor = {ObjectOptimisticLockingFailureException.class}, maxAttempts = 5, backoff = @Backoff(delay = 50, multiplier = 2, maxDelay = 500))
     @Transactional
     public void cancelReservations(List<StockItem> items) {
         Map<UUID, Integer> itemMap = items.stream()

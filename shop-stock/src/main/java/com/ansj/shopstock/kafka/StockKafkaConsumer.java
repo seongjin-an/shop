@@ -78,11 +78,15 @@ public class StockKafkaConsumer {
                         MDC.put("sagaId", event.getSagaId().toString());
                         compensateStockUseCase.onPaymentSuccess(event);
                     });
+            // 성공 시에만 ack → 실패 시 DefaultErrorHandler 가 재시도 후 오프셋 커밋
+            acknowledgment.acknowledge();
         } catch (Exception e) {
-            log.error("payment-success 처리 중 오류. cause: {}", e.getMessage(), e);
+            log.error("payment-success 처리 중 오류. topic={}, offset={}, cause={}",
+                    record.topic(), record.offset(), e.getMessage(), e);
+            // ack 하지 않음 → DefaultErrorHandler 로 위임
+            throw e;
         } finally {
             MDC.clear();
-            acknowledgment.acknowledge();
         }
     }
 
@@ -98,11 +102,15 @@ public class StockKafkaConsumer {
                         MDC.put("sagaId", event.getSagaId().toString());
                         compensateStockUseCase.onOrderCancelled(event);
                     });
+            // 성공 시에만 ack → 실패 시 DefaultErrorHandler 가 재시도 후 오프셋 커밋
+            acknowledgment.acknowledge();
         } catch (Exception e) {
-            log.error("order-cancelled 처리 중 오류. cause: {}", e.getMessage(), e);
+            log.error("order-cancelled 처리 중 오류. topic={}, offset={}, cause={}",
+                    record.topic(), record.offset(), e.getMessage(), e);
+            // ack 하지 않음 → DefaultErrorHandler 로 위임
+            throw e;
         } finally {
             MDC.clear();
-            acknowledgment.acknowledge();
         }
     }
 }

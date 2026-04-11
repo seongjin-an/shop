@@ -27,6 +27,9 @@ public class CompensateStockUseCase {
 
     /**
      * payment-success 수신 → reservedQuantity 차감 (예약 확정)
+     *
+     * <p>예외를 catch하지 않고 호출자(StockKafkaConsumer)까지 전파한다.
+     * 리스너가 ack를 생략하면 Kafka가 메시지를 재전달하므로 유실 없이 재처리된다.
      */
     public void onPaymentSuccess(PaymentSuccessEvent event) {
         if (inboxEventService.existsByEventId(event.getEventId())) {
@@ -34,18 +37,17 @@ public class CompensateStockUseCase {
             return;
         }
 
-        try {
-            List<StockItem> items = getItemsBySagaId(event.getSagaId().id());
-            stockService.confirmReservations(items);
-            inboxEventService.createInboxEvent(event);
-            log.info("재고 예약 확정 완료. sagaId={}", event.getSagaId());
-        } catch (Exception e) {
-            log.error("재고 예약 확정 실패. sagaId={}, cause={}", event.getSagaId(), e.getMessage(), e);
-        }
+        List<StockItem> items = getItemsBySagaId(event.getSagaId().id());
+        stockService.confirmReservations(items);
+        inboxEventService.createInboxEvent(event);
+        log.info("재고 예약 확정 완료. sagaId={}", event.getSagaId());
     }
 
     /**
      * order-cancelled 수신 → reservedQuantity 복구 (보상 트랜잭션)
+     *
+     * <p>예외를 catch하지 않고 호출자(StockKafkaConsumer)까지 전파한다.
+     * 리스너가 ack를 생략하면 Kafka가 메시지를 재전달하므로 유실 없이 재처리된다.
      */
     public void onOrderCancelled(OrderCancelledEvent event) {
         if (inboxEventService.existsByEventId(event.getEventId())) {
@@ -53,14 +55,10 @@ public class CompensateStockUseCase {
             return;
         }
 
-        try {
-            List<StockItem> items = getItemsBySagaId(event.getSagaId().id());
-            stockService.cancelReservations(items);
-            inboxEventService.createInboxEvent(event);
-            log.info("재고 보상 완료. sagaId={}", event.getSagaId());
-        } catch (Exception e) {
-            log.error("재고 보상 실패. sagaId={}, cause={}", event.getSagaId(), e.getMessage(), e);
-        }
+        List<StockItem> items = getItemsBySagaId(event.getSagaId().id());
+        stockService.cancelReservations(items);
+        inboxEventService.createInboxEvent(event);
+        log.info("재고 보상 완료. sagaId={}", event.getSagaId());
     }
 
     /**

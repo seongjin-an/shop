@@ -155,3 +155,37 @@ Next.js rewrites:
 - `/api/*` → `localhost:8080` (shop-user)
 - `/product-api/*` → `localhost:8081/api/*` (shop-product)
 - `/order-api/*` → `localhost:8082/*` (shop-order)
+
+### Locust
+
+```bash
+cd locust
+source .venv/bin/activate
+
+# 웹 UI 모드 (브라우저에서 http://localhost:8089 열기)
+locust -f stress.py
+
+# Headless 모드 (CI/자동화용)
+locust -f stress.py --host http://localhost:8082 \
+       --users 50 --spawn-rate 5 --run-time 60s --headless
+```
+
+
+```text
+###
+POST http://localhost:8082/orders
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "deliveryAddress": "z",
+  "items": [
+    {
+      "productId": "019d5cdc-da58-7101-8b23-c86a7e118858",
+      "quantity": 1,
+      "unitPrice": 50000,
+      "productName": "비타민A"
+    }
+  ]
+}
+```
