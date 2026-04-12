@@ -46,3 +46,9 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// bootRun 시 로그 파일이 각 서비스 하위 logs/ 에 저장되도록 projectDir 기준으로 경로 고정
+// IntelliJ에서 루트 프로젝트를 working directory로 실행해도 shop-stock/logs/ 에 기록됨
+tasks.named('bootRun') {
+    systemProperty 'LOG_PATH', "${projectDir}/logs"
+}

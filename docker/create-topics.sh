@@ -30,6 +30,12 @@ TOPICS=(
   "order-canceled"
 )
 
+# DLT 토픽: 파티션 1개 (고부하 불필요, 순서 보장 + 단순 관리)
+DLT_TOPICS=(
+  "payment-success-DLT"   # shop-stock 이 payment-success 처리 최종 실패 시
+  "order-canceled-DLT"    # shop-stock 이 order-canceled 처리 최종 실패 시
+)
+
 echo ">>> Kafka 토픽 생성 시작 (container: $KAFKA_CONTAINER)"
 echo ""
 
@@ -44,6 +50,24 @@ for TOPIC in "${TOPICS[@]}"; do
     --if-not-exists \
     --topic "$TOPIC" \
     --partitions "$PARTITIONS" \
+    --replication-factor "$REPLICATION"
+
+  if [ $? -eq 0 ]; then
+    echo "  ✓ $TOPIC"
+  else
+    echo "  ✗ $TOPIC (실패)"
+  fi
+done
+
+echo ""
+echo ">>> DLT 토픽 생성 (파티션 1개 고정)"
+for TOPIC in "${DLT_TOPICS[@]}"; do
+  docker exec "$KAFKA_CONTAINER" \
+    kafka-topics --bootstrap-server "$BOOTSTRAP" \
+    --create \
+    --if-not-exists \
+    --topic "$TOPIC" \
+    --partitions 1 \
     --replication-factor "$REPLICATION"
 
   if [ $? -eq 0 ]; then

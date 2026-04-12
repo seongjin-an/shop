@@ -7,8 +7,8 @@ from locust.runners import MasterRunner, WorkerRunner
 # 실제 DB에 등록된 productId로 교체하여 사용하세요
 PRODUCTS = [
     {
-        "productId": "019d7bbd-97ba-7853-a303-7b8571f96f9b",
-        "productName": "비타민A",
+        "productId": "019d803c-8402-744a-a47e-42d2a8c15f38",
+        "productName": "VitaminA",
         "unitPrice": 30000,
     },
 ]

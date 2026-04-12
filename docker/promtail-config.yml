@@ -1,0 +1,35 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+
+  - job_name: shop-stock
+    static_configs:
+      - targets: [localhost]
+        labels:
+          service: shop-stock
+          __path__: /logs/shop-stock/app.log
+
+
+  - job_name: shop-order
+    static_configs:
+      - targets: [localhost]
+        labels:
+          service: shop-order
+          __path__: /logs/shop-order/app.log
+
+
+  - job_name: shop-payment
+    static_configs:
+      - targets: [localhost]
+        labels:
+          service: shop-payment
+          __path__: /logs/shop-payment/app.log
+

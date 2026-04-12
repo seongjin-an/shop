@@ -65,3 +65,45 @@ services:
       - ./.data/kafkaui:/etc/kafkaui
     depends_on:
       - kafka
+
+  # ──────────────────────────────────────────
+  # 로그 수집 스택: Loki + Promtail + Grafana
+  # 접속: http://localhost:13000  (admin / admin)
+  # ──────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.0.0
+    restart: unless-stopped
+    ports:
+      - "13100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/loki-config.yml:ro
+      - ./.data/loki:/loki
+    command: -config.file=/etc/loki/loki-config.yml
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    restart: unless-stopped
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      # 각 서비스 하위 logs/ 를 개별 마운트 → build.gradle bootRun 에서 LOG_PATH=projectDir/logs 로 주입
+      - ../shop-stock/logs:/logs/shop-stock:ro
+      - ../shop-order/logs:/logs/shop-order:ro
+      - ../shop-payment/logs:/logs/shop-payment:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    restart: unless-stopped
+    ports:
+      - "13000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./.data/grafana:/var/lib/grafana
+    depends_on:
+      - loki

@@ -29,11 +29,11 @@ cd docker && docker compose up -d
 ./docker/create-topics.sh
 
 # 3. 각 서비스 실행 (별도 터미널)
-cd shop-user     && ./gradlew bootRun
-cd shop-product  && ./gradlew bootRun
-cd shop-stock    && ./gradlew bootRun
-cd shop-order    && ./gradlew bootRun
-cd shop-payment  && ./gradlew bootRun
+cd shop-user     && nohup ./gradlew bootRun 2>&1 & 
+cd shop-product  && nohup ./gradlew bootRun 2>&1 &
+cd shop-stock    && nohup ./gradlew bootRun -DLOG_PATH=~/workspace/shop/shop-stock/logs 2>&1 &
+cd shop-order    && nohup ./gradlew bootRun -DLOG_PATH=~/workspace/shop/shop-order/logs 2>&1 &
+cd shop-payment  && nohup ./gradlew bootRun -DLOG_PATH=~/workspace/shop/shop-payment/logs 2>&1 &
 cd shop-frontend && npm run dev
 ```
 
@@ -188,4 +188,25 @@ Content-Type: application/json
     }
   ]
 }
+```
+
+### 장애 격리 레이어
+```text
+[1차] @Retryable × 5       — JVM 내 즉시 재시도 (낙관적 락 충돌)
+[2차] DefaultErrorHandler × 3 — Kafka 레벨 재시도 (2초 간격)
+[3차] DLT 컨슈머           — 부하 감소 후 재처리 (몇 분 지연)
+[4차] 알람 + 수동 개입      — 진짜 비정상 케이스 (DB 이상, 버그 등)
+```
+
+### DB table data reset
+```text
+truncate payment_inbox_event;
+truncate payments;
+truncate product_inbox_event;
+truncate product_outbox_event;
+truncate stock;
+truncate stock_outbox_event;
+truncate product;
+truncate order_item;
+truncate orders;
 ```

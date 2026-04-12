@@ -63,3 +63,11 @@ shop:
         topic: order-canceled
         group-id: order-cancelled-stock-group
         concurrency: 1
+      payment-success-dlt:
+        topic: payment-success-DLT
+        group-id: payment-success-dlt-group
+        concurrency: 1
+      order-cancelled-dlt:
+        topic: order-canceled-DLT
+        group-id: order-cancelled-dlt-group
+        concurrency: 1
