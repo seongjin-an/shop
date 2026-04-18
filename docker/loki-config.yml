@@ -42,4 +42,5 @@ limits_config:
   max_label_names_per_series: 30  # 라벨 개수가 많아져도 거부하지 않음
 
   # 3. 로그 라인 크기 제한 (Stack Trace가 길 때 유용)
-  max_line_size_truncate: 256kb   # 로그 한 줄이 너무 길면 잘라내지 않고 수용
+  max_line_size: 256kb            # 로그 한 줄 최대 크기 (초과 시 아래 설정에 따라 처리)
+  max_line_size_truncate: true    # true: 초과분을 잘라 수용, false: 해당 라인 거부

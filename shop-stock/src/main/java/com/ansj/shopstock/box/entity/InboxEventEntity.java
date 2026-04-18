@@ -12,7 +12,15 @@ import java.util.UUID;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Table(name = "stock_inbox_event")
+@Table(
+        name = "stock_inbox_event",
+        indexes = {
+                // CompensateStockUseCase.findBySagaIdAndEventType(sagaId, "ORDER_CREATED") 조회 최적화
+                // 선두 컬럼 saga_id 는 카디널리티가 매우 높아 선택도가 좋다.
+                // left-prefix 규칙에 따라 saga_id 단독 조회에도 재사용됨.
+                @Index(name = "idx_inbox_saga_event_type", columnList = "saga_id, event_type")
+        }
+)
 @Entity
 public class InboxEventEntity {
 

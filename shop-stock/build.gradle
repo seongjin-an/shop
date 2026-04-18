@@ -51,4 +51,22 @@ tasks.named('test') {
 // IntelliJ에서 루트 프로젝트를 working directory로 실행해도 shop-stock/logs/ 에 기록됨
 tasks.named('bootRun') {
     systemProperty 'LOG_PATH', "${projectDir}/logs"
+
+    // OpenTelemetry Java Agent 자동 적용 (docker/download-otel-agent.sh 선행 필요)
+    def otelAgentJar = file("${projectDir}/../docker/agent/opentelemetry-javaagent.jar")
+    if (otelAgentJar.exists()) {
+        jvmArgs "-javaagent:${otelAgentJar.absolutePath}"
+        environment 'OTEL_SERVICE_NAME', project.name
+        environment 'OTEL_RESOURCE_ATTRIBUTES', "service.namespace=shop,deployment.environment=local"
+        environment 'OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:24317'
+        environment 'OTEL_EXPORTER_OTLP_PROTOCOL', 'grpc'
+        environment 'OTEL_TRACES_EXPORTER', 'otlp'
+        environment 'OTEL_METRICS_EXPORTER', 'none'
+        environment 'OTEL_LOGS_EXPORTER', 'none'
+        environment 'OTEL_PROPAGATORS', 'tracecontext,baggage'
+        environment 'OTEL_INSTRUMENTATION_KAFKA_EXPERIMENTAL_SPAN_ATTRIBUTES', 'true'
+        environment 'OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED', 'true'
+    } else {
+        logger.lifecycle("[otel] agent 미설치 - docker/download-otel-agent.sh 실행 후 bootRun 재시작")
+    }
 }

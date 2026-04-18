@@ -102,8 +102,42 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      # Tempo ↔ Loki 상호 링크 렌더링에 필요
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceToMetrics
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./.data/grafana:/var/lib/grafana
     depends_on:
+      - loki
+      - tempo
+
+  # ──────────────────────────────────────────
+  # 분산 트레이싱 스택: Tempo + OTel Collector
+  # Tempo:        http://localhost:13200
+  # OTel gRPC:    localhost:14317  (서비스 → collector → tempo)
+  # OTel HTTP:    localhost:14318
+  # ──────────────────────────────────────────
+  tempo:
+    image: grafana/tempo:2.5.0
+    restart: unless-stopped
+    command: -config.file=/etc/tempo/tempo.yml
+    ports:
+      - "13200:3200"   # Tempo UI / API
+      - "14317:4317"   # (미사용, collector 경유)
+    volumes:
+      - ./tempo-config.yml:/etc/tempo/tempo.yml:ro
+      - ./.data/tempo:/var/tempo
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.0
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/otel-collector-config.yml"]
+    ports:
+      - "24317:4317"   # gRPC OTLP (서비스가 여기로 전송)
+      - "24318:4318"   # HTTP OTLP
+      - "28888:8888"   # collector 자체 메트릭
+    volumes:
+      - ./otel-collector-config.yml:/etc/otelcol/otel-collector-config.yml:ro
+    depends_on:
+      - tempo
       - loki

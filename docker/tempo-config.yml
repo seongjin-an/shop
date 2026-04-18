@@ -1,0 +1,41 @@
+# Tempo: 단일 바이너리(로컬 개발용) 설정
+# 참고: https://grafana.com/docs/tempo/latest/configuration/
+
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+ingester:
+  max_block_duration: 5m       # 로컬 개발에서는 짧게
+  trace_idle_period: 10s
+
+compactor:
+  compaction:
+    block_retention: 24h        # 로컬은 하루만 보관
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+# Service graph / span metrics는 prometheus 붙일 때 활성화
+metrics_generator:
+  processor:
+    service_graphs: {}
+    span_metrics: {}
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: []   # prometheus 추가 시 [service-graphs, span-metrics]

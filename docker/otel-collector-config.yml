@@ -1,0 +1,69 @@
+# OTel Collector: 서비스로부터 OTLP 수신 → Tempo(트레이스), Loki(로그)로 라우팅
+# 참고: https://opentelemetry.io/docs/collector/configuration/
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 2s
+    send_batch_size: 1024
+
+  # 리소스 속성 표준화
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: local
+        action: upsert
+
+  # ──────────────────────────────────────────
+  # 핵심: Kafka 메시지 key = sagaId 규칙을 이용해
+  # Kafka producer/consumer span 에 saga.id 속성 자동 부여
+  # ──────────────────────────────────────────
+  transform/saga_id:
+    trace_statements:
+      - context: span
+        statements:
+          # OTel Agent 가 기록한 messaging.kafka.message.key 를 saga.id 로 승격
+          - set(attributes["saga.id"], attributes["messaging.kafka.message.key"])
+              where attributes["messaging.kafka.message.key"] != nil
+
+  # Baggage 로 전파된 saga.id 를 span attribute 로 승격 (HTTP / DB span 포함)
+  # OTel Java Agent 는 현재 context baggage 를 자동으로 child span 에 상속시킨다.
+  # 추가 처리 없이 baggage → attribute 승격만 해주면 전체 flow 에서 검색 가능.
+  attributes/baggage:
+    actions:
+      - key: saga.id
+        action: upsert
+        from_context: baggage.saga.id
+
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource, transform/saga_id, attributes/baggage]
+      exporters: [otlp/tempo]
+    logs:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlphttp/loki]

@@ -8,4 +8,6 @@ $ source .venv/bin/activate
 (.venv)
 # anseongjin @ anseongjin-ui-MacBookPro in ~/workspace/shop/locust on git:main x .venv [15:21:55]
 $ pip install locust
+
+$ locust -f stress.py
 ```

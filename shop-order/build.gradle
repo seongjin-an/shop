@@ -45,4 +45,25 @@ tasks.named('test') {
 
 tasks.named('bootRun') {
     systemProperty 'LOG_PATH', "${projectDir}/logs"
+
+    // OpenTelemetry Java Agent 자동 적용
+    // 1) 최초 1회: docker/download-otel-agent.sh 실행
+    // 2) docker compose up -d (tempo + otel-collector 기동)
+    // 3) ./gradlew bootRun → 자동으로 OTel 추적 전송
+    def otelAgentJar = file("${projectDir}/../docker/agent/opentelemetry-javaagent.jar")
+    if (otelAgentJar.exists()) {
+        jvmArgs "-javaagent:${otelAgentJar.absolutePath}"
+        environment 'OTEL_SERVICE_NAME', project.name
+        environment 'OTEL_RESOURCE_ATTRIBUTES', "service.namespace=shop,deployment.environment=local"
+        environment 'OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:24317'
+        environment 'OTEL_EXPORTER_OTLP_PROTOCOL', 'grpc'
+        environment 'OTEL_TRACES_EXPORTER', 'otlp'
+        environment 'OTEL_METRICS_EXPORTER', 'none'     // Phase 1: 트레이스만
+        environment 'OTEL_LOGS_EXPORTER', 'none'        // 로그는 기존 promtail 유지
+        environment 'OTEL_PROPAGATORS', 'tracecontext,baggage'
+        environment 'OTEL_INSTRUMENTATION_KAFKA_EXPERIMENTAL_SPAN_ATTRIBUTES', 'true'
+        environment 'OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED', 'true'
+    } else {
+        logger.lifecycle("[otel] agent 미설치 - docker/download-otel-agent.sh 실행 후 bootRun 재시작")
+    }
 }
