@@ -4,6 +4,7 @@ import com.ansj.shoporder.common.AggregateId;
 import com.ansj.shoporder.common.EventId;
 import com.ansj.shoporder.common.JsonUtil;
 import com.ansj.shoporder.common.SagaId;
+import com.ansj.shoporder.metrics.SagaMetrics;
 import com.ansj.shoporder.order.dto.CreateOrderRequest;
 import com.ansj.shoporder.order.event.outbound.OrderCreatedEvent;
 import com.ansj.shoporder.order.event.outbound.OrderEventItem;
@@ -33,6 +34,7 @@ public class CreateOrderUseCase {
     private final OrderService orderService;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final JsonUtil jsonUtil;
+    private final SagaMetrics sagaMetrics;
 
     /**
      * 주문 생성 + order-created 이벤트 발행.
@@ -43,6 +45,7 @@ public class CreateOrderUseCase {
      */
     public UUID createOrder(CreateOrderRequest request) {
         Orders order = orderService.createOrder(request);
+        sagaMetrics.recordStarted();
         MDC.put("sagaId", order.getSagaId().toString());
         try {
             List<OrderEventItem> eventItems = order.getItems().stream()

@@ -17,13 +17,13 @@ services:
       - "16379:6379"
     volumes:
       - ./.data/redis:/data/
-  redis-insight:
-    image: redis/redisinsight:2.64.1
-    restart: unless-stopped
-    ports:
-      - "15540:5540"
-    volumes:
-      - ./.data/redis-insight:/data
+#  redis-insight:
+#    image: redis/redisinsight:2.64.1
+#    restart: unless-stopped
+#    ports:
+#      - "15540:5540"
+#    volumes:
+#      - ./.data/redis-insight:/data
   kafka:
     image: confluentinc/cp-kafka:7.5.1 # Apache Kafka 3.5.x = Confluent Platform 7.5.x
     container_name: kafka
@@ -53,18 +53,18 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     volumes:
       - ./.data/kafka:/var/lib/kafka/data
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    restart: unless-stopped
-    ports:
-      - '18090:8080'
-    environment:
-      - KAFKA_CLUSTERS_0_NAME=Local-Kafka-Cluster
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
-    volumes:
-      - ./.data/kafkaui:/etc/kafkaui
-    depends_on:
-      - kafka
+#  kafka-ui:
+#    image: provectuslabs/kafka-ui:latest
+#    restart: unless-stopped
+#    ports:
+#      - '18090:8080'
+#    environment:
+#      - KAFKA_CLUSTERS_0_NAME=Local-Kafka-Cluster
+#      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+#    volumes:
+#      - ./.data/kafkaui:/etc/kafkaui
+#    depends_on:
+#      - kafka
 
   # ──────────────────────────────────────────
   # 로그 수집 스택: Loki + Promtail + Grafana
@@ -80,19 +80,28 @@ services:
       - ./.data/loki:/loki
     command: -config.file=/etc/loki/loki-config.yml
 
-  promtail:
-    image: grafana/promtail:3.0.0
-    restart: unless-stopped
-    volumes:
-      - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro
-      # 각 서비스 하위 logs/ 를 개별 마운트 → build.gradle bootRun 에서 LOG_PATH=projectDir/logs 로 주입
-      - ../shop-stock/logs:/logs/shop-stock:ro
-      - ../shop-order/logs:/logs/shop-order:ro
-      - ../shop-payment/logs:/logs/shop-payment:ro
-    command: -config.file=/etc/promtail/promtail-config.yml
-    depends_on:
-      - loki
+  # ──────────────────────────────────────────
+  # promtail 은 더이상 사용하지 않고 otel-collector -> loki 로 대체한다.
+  # ──────────────────────────────────────────
+#  promtail:
+#    image: grafana/promtail:3.0.0
+#    restart: unless-stopped
+#    volumes:
+#      - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+#      # 각 서비스 하위 logs/ 를 개별 마운트 → build.gradle bootRun 에서 LOG_PATH=projectDir/logs 로 주입
+#      - ../shop-stock/logs:/logs/shop-stock:ro
+#      - ../shop-order/logs:/logs/shop-order:ro
+#      - ../shop-payment/logs:/logs/shop-payment:ro
+#    command: -config.file=/etc/promtail/promtail-config.yml
+#    depends_on:
+#      - loki
 
+  # ──────────────────────────────────────────
+  # 그라파나
+  # datasources/*.yml : DataSource 자동 등록, loki.yml 은 Loki + Tempo 데이터소스 선언, prometheus.yml 은 Prometheus 데이터소스 선언
+  # dashboards/*.yml : Dashboard Provider 등록, 볼륨으로 연결한 saga-overview.json 등 을 읽어옴.
+  #
+  # ──────────────────────────────────────────
   grafana:
     image: grafana/grafana:11.0.0
     restart: unless-stopped
@@ -106,10 +115,12 @@ services:
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceToMetrics
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./.data/grafana:/var/lib/grafana
     depends_on:
       - loki
       - tempo
+      - prometheus
 
   # ──────────────────────────────────────────
   # 분산 트레이싱 스택: Tempo + OTel Collector
@@ -141,3 +152,38 @@ services:
     depends_on:
       - tempo
       - loki
+
+  # ──────────────────────────────────────────
+  # 메트릭 스택: Prometheus + Kafka Exporter
+  # Prometheus UI: http://localhost:19090
+  # ──────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    ports:
+      - "19090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d           # 로컬 개발: 7일
+      - --web.enable-remote-write-receiver         # Tempo metrics_generator 가 이리로 push
+      - --enable-feature=exemplar-storage          # Tempo ↔ Prometheus exemplar 연결
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./.data/prometheus:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"        # 호스트에서 실행 중인 Spring Boot 접근용 (Linux 호환)
+    depends_on:
+      - kafka-exporter
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.7.0
+    container_name: kafka-exporter
+    restart: unless-stopped
+    command:
+      - --kafka.server=kafka:9092
+      - --web.listen-address=:9308
+    ports:
+      - "19308:9308"
+    depends_on:
+      - kafka

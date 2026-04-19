@@ -1,0 +1,54 @@
+# Prometheus: 메트릭 수집 + remote_write 수신 활성화
+# - Spring Boot /actuator/prometheus (5개 서비스)
+# - kafka-exporter (consumer lag, broker 정보)
+# - Tempo metrics_generator (service graph, span metrics → remote_write push)
+# - OTel Collector 자기 메트릭 (8888)
+# 참고: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: shop-local
+    env: dev
+
+# 타 시스템이 remote_write 로 밀어넣는 메트릭도 받는다 (Tempo → Prometheus)
+# 이 기능은 prometheus CLI 플래그 --web.enable-remote-write-receiver 로 켜야 함 (compose.yaml 에서 설정)
+
+scrape_configs:
+  # ─── Prometheus 자기 자신 ───────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ─── Spring Boot 서비스들 (Actuator) ───────────────────
+  # 주의: Prometheus 가 컨테이너, 앱은 호스트에서 실행 → host.docker.internal 로 접근
+  - job_name: shop-services
+    metrics_path: /actuator/prometheus
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+        labels: { service: shop-user }
+      - targets: ['host.docker.internal:8081']
+        labels: { service: shop-product }
+      - targets: ['host.docker.internal:8082']
+        labels: { service: shop-order }
+      - targets: ['host.docker.internal:8083']
+        labels: { service: shop-stock }
+      - targets: ['host.docker.internal:8085']   # shop-payment 는 management 전용 포트
+        labels: { service: shop-payment }
+
+  # ─── Kafka consumer lag / broker 지표 ─────────────────
+  - job_name: kafka-exporter
+    static_configs:
+      - targets: ['kafka-exporter:9308']
+
+  # ─── OTel Collector 자기 상태 ─────────────────────────
+  - job_name: otel-collector
+    static_configs:
+      - targets: ['otel-collector:8888']
+
+  # ─── Tempo 자기 상태 ──────────────────────────────────
+  - job_name: tempo
+    static_configs:
+      - targets: ['tempo:3200']

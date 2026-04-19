@@ -26,6 +26,8 @@ stop_service() {
 }
 
 echo ">>> shop 서비스 종료"
+stop_service "shop-user"
+stop_service "shop-product"
 stop_service "shop-order"
 stop_service "shop-stock"
 stop_service "shop-payment"

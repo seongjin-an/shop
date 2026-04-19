@@ -1,6 +1,7 @@
 package com.ansj.shoporder.usecase;
 
 import com.ansj.shoporder.common.*;
+import com.ansj.shoporder.metrics.SagaMetrics;
 import com.ansj.shoporder.order.entity.OrderEntity;
 import com.ansj.shoporder.order.event.inbound.PaymentFailedEvent;
 import com.ansj.shoporder.order.event.inbound.PaymentSuccessEvent;
@@ -27,6 +28,7 @@ public class PaymentResultUseCase {
     private final OrderService orderService;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final JsonUtil jsonUtil;
+    private final SagaMetrics sagaMetrics;
 
     /**
      * payment-success 수신 → STOCK_RESERVED → COMPLETED (terminal)
@@ -34,6 +36,8 @@ public class PaymentResultUseCase {
     public void onPaymentSuccess(PaymentSuccessEvent event) {
         OrderEntity order = orderService.getOrderBySagaId(event.getSagaId().id());
         order.paymentCompleted();
+        sagaMetrics.recordTransition("STOCK_RESERVED", "COMPLETED");
+        sagaMetrics.recordTerminated("COMPLETED", order.getCreatedAt());
         log.info("결제 완료. sagaId={}", event.getSagaId());
     }
 
@@ -44,6 +48,7 @@ public class PaymentResultUseCase {
     public void onPaymentFailed(PaymentFailedEvent event) {
         OrderEntity order = orderService.getOrderBySagaId(event.getSagaId().id());
         order.paymentFailed();
+        sagaMetrics.recordTransition("STOCK_RESERVED", "PAYMENT_FAILED");
 
         OrderCancelledEvent cancelledEvent = OrderCancelledEvent.builder()
                 .eventId(EventId.newId())
@@ -61,6 +66,8 @@ public class PaymentResultUseCase {
 
         // 보상 이벤트 발행 후 즉시 CANCELLED 로 전이 (stock 보상 완료 응답을 기다리지 않음)
         order.compensationCompleted();
+        sagaMetrics.recordTransition("PAYMENT_FAILED", "CANCELLED");
+        sagaMetrics.recordTerminated("CANCELLED", order.getCreatedAt());
         log.info("결제 실패 — 보상 트랜잭션 시작. sagaId={}, reason={}", event.getSagaId(), event.getReason());
     }
 }

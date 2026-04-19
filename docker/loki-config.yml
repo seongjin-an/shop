@@ -29,6 +29,12 @@ schema_config:
 limits_config:
   # 개발 환경: 수집 순서가 맞지 않아도 허용 (스트레스 테스트 시 로그 순서 역전 방지)
   reject_old_samples: false
+
+  # OTLP 수신 활성화 (Loki 3.0+)
+  # trace_id / span_id / severity_number 등은 structured metadata 로 저장됨
+  # Grafana 에서 로그 상세 → "View trace" 버튼이 자동 노출
+  allow_structured_metadata: true
+  volume_enabled: true          # /api/v1/volume 엔드포인트 — 라벨 카디널리티 모니터링
 #  ingestion_rate_mb: 16
 #  ingestion_burst_size_mb: 32
   # 1. 초당 유입량 대폭 확대

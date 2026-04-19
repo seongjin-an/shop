@@ -32,6 +32,9 @@ dependencies {
 
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'       // Actuator /prometheus 전용 관리 서버
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.springframework.kafka:spring-kafka'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'
@@ -60,10 +63,16 @@ tasks.named('bootRun') {
         environment 'OTEL_EXPORTER_OTLP_PROTOCOL', 'grpc'
         environment 'OTEL_TRACES_EXPORTER', 'otlp'
         environment 'OTEL_METRICS_EXPORTER', 'none'
-        environment 'OTEL_LOGS_EXPORTER', 'none'
+        environment 'OTEL_LOGS_EXPORTER', 'otlp'        // Collector -> Loki 네이티브 OTLP 경로
         environment 'OTEL_PROPAGATORS', 'tracecontext,baggage'
         environment 'OTEL_INSTRUMENTATION_KAFKA_EXPERIMENTAL_SPAN_ATTRIBUTES', 'true'
         environment 'OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED', 'true'
+        // Logback -> OTel LogRecord 브리지. trace_id/span_id/code.* 자동 주입
+        environment 'OTEL_INSTRUMENTATION_LOGBACK_APPENDER_ENABLED', 'true'
+        environment 'OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_CODE_ATTRIBUTES', 'true'
+        environment 'OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_MARKER_ATTRIBUTE', 'true'
+        environment 'OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES', 'true'
+        environment 'OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_MDC_ATTRIBUTES', '*'
     } else {
         logger.lifecycle("[otel] agent 미설치 - docker/download-otel-agent.sh 실행 후 bootRun 재시작")
     }

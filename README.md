@@ -170,6 +170,19 @@ locust -f stress.py --host http://localhost:8082 \
        --users 50 --spawn-rate 5 --run-time 60s --headless
 ```
 
+### create product & order
+```
+###
+POST http://localhost:8081/api/products
+Content-Type: application/json
+
+{
+  "productName": "VitaminA",
+  "quantity": 1000000,
+  "productDesc": "z",
+  "productPrice": 30000
+}
+```
 
 ```text
 ###

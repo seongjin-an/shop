@@ -1,6 +1,7 @@
 package com.ansj.shoporder.usecase;
 
 import com.ansj.shoporder.common.*;
+import com.ansj.shoporder.metrics.SagaMetrics;
 import com.ansj.shoporder.order.entity.OrderEntity;
 import com.ansj.shoporder.order.event.inbound.StockReserveFailedEvent;
 import com.ansj.shoporder.order.event.inbound.StockReservedEvent;
@@ -27,6 +28,7 @@ public class StockReserveResultUseCase {
     private final OrderService orderService;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final JsonUtil jsonUtil;
+    private final SagaMetrics sagaMetrics;
 
     /**
      * stock-reserved 수신 → PENDING → STOCK_RESERVED 전이 → payment-requested 발행
@@ -34,6 +36,7 @@ public class StockReserveResultUseCase {
     public void onStockReserved(StockReservedEvent event) {
         OrderEntity order = orderService.getOrderBySagaId(event.getSagaId().id());
         order.stockReserved();
+        sagaMetrics.recordTransition("PENDING", "STOCK_RESERVED");
 
         PaymentRequestedEvent paymentEvent = PaymentRequestedEvent.builder()
                 .eventId(EventId.newId())
@@ -59,6 +62,8 @@ public class StockReserveResultUseCase {
     public void onStockReserveFailed(StockReserveFailedEvent event) {
         OrderEntity order = orderService.getOrderBySagaId(event.getSagaId().id());
         order.stockFailed();
+        sagaMetrics.recordTransition("PENDING", "STOCK_FAILED");
+        sagaMetrics.recordTerminated("STOCK_FAILED", order.getCreatedAt());
         log.info("재고 부족으로 주문 실패 처리. sagaId={}, reason={}", event.getSagaId(), event.getReason());
     }
 }

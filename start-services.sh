@@ -55,6 +55,8 @@ start_service() {
 }
 
 echo ">>> shop 서비스 기동"
+start_service "shop-user"
+start_service "shop-product"
 start_service "shop-stock"
 start_service "shop-order"
 start_service "shop-payment"

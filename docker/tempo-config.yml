@@ -29,13 +29,30 @@ storage:
     local:
       path: /var/tempo/blocks
 
-# Service graph / span metrics는 prometheus 붙일 때 활성화
+# ──────────────────────────────────────────
+# metrics_generator: trace → RED / service-graph 메트릭 생성
+# 생성된 메트릭은 Prometheus 로 remote_write push
+# ──────────────────────────────────────────
 metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: shop-local
   processor:
-    service_graphs: {}
-    span_metrics: {}
+    service_graphs:
+      # 서비스 간 요청 횟수 / latency / 에러율
+      dimensions: [service.namespace, deployment.environment]
+    span_metrics:
+      # span 단위 RED (Rate, Error, Duration)
+      dimensions: [service.namespace, span.name, span.kind, status.code]
+      histogram_buckets: [0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.128, 0.256, 0.512, 1.024, 2.048, 4.096]
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
 
 overrides:
   defaults:
     metrics_generator:
-      processors: []   # prometheus 추가 시 [service-graphs, span-metrics]
+      processors: [service-graphs, span-metrics]   # ← 테넌트 레벨 활성화

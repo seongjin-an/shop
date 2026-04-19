@@ -42,12 +42,28 @@ processors:
         action: upsert
         from_context: baggage.saga.id
 
+  # ──────────────────────────────────────────
+  # 로그 파이프라인 전용: 라벨 카디널리티 관리
+  # Loki 네이티브 OTLP 는 기본적으로 service.name, service.namespace,
+  # deployment.environment, level 을 라벨로 자동 승격한다.
+  # 나머지(trace_id, span_id, code.*, thread.name 등)는 structured metadata 로 저장.
+  # ──────────────────────────────────────────
+  transform/logs:
+    log_statements:
+      - context: log
+        statements:
+          # level 라벨용 — severity_text 를 소문자로 정규화
+          - set(severity_text, ConvertCase(severity_text, "lower")) where severity_text != ""
+
 exporters:
   otlp/tempo:
     endpoint: tempo:4317
     tls:
       insecure: true
 
+  # Loki 네이티브 OTLP 엔드포인트.
+  # Loki 3.0+ 에서 resource.service.name -> service_name 라벨 자동 매핑.
+  # trace_id / span_id 는 structured metadata 로 들어가 Grafana 가 자동 인식.
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
 
@@ -65,5 +81,5 @@ service:
       exporters: [otlp/tempo]
     logs:
       receivers: [otlp]
-      processors: [batch, resource]
+      processors: [batch, resource, transform/logs]
       exporters: [otlphttp/loki]
