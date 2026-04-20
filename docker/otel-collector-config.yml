@@ -1,7 +1,17 @@
-# OTel Collector: 서비스로부터 OTLP 수신 → Tempo(트레이스), Loki(로그)로 라우팅
-# 참고: https://opentelemetry.io/docs/collector/configuration/
+# OTel Collector — Gateway 패턴
+# ──────────────────────────────────────────────────────────────────
+# 모든 관측 신호(traces / metrics / logs)가 Collector 한 곳을 경유한다.
+# 애플리케이션/인프라 컴포넌트들은 Collector 만 바라보고,
+# Prometheus / Tempo / Loki 는 Collector 의 exporter 로부터 데이터를 받는다.
+#
+# 이 구조가 k8s(EKS) 이주 시 그대로 유효한 이유:
+#   - Collector 를 DaemonSet 으로 띄우고 앱은 node-local Collector 로만 push
+#   - TSDB 교체(Mimir/Thanos/AMP)가 exporter 한 줄 수정으로 끝남
+#   - enrichment / sampling / PII scrubbing 을 중앙 한 곳에서
+# ──────────────────────────────────────────────────────────────────
 
 receivers:
+  # ─── 앱 → Collector (OTLP push: traces, logs, (옵션) metrics) ───
   otlp:
     protocols:
       grpc:
@@ -9,12 +19,43 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
+  # ─── Collector → Actuator / Exporter (pull: metrics) ───
+  # 기존에 Prometheus 가 직접 scrape 하던 대상들을 Collector 가 흡수.
+  # Micrometer 가 내주는 풍부한 Spring 네이티브 메트릭(HikariCP, JVM, HTTP RED,
+  # http_server_requests_seconds_*, hikaricp_connections_active 등)의 이름을
+  # 그대로 보존하므로 기존 Grafana 대시보드/PromQL 이 수정 없이 동작한다.
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'shop-services'
+          scrape_interval: 10s
+          metrics_path: /actuator/prometheus
+          static_configs:
+            - targets: ['host.docker.internal:8080']
+              labels: { service: shop-user }
+            - targets: ['host.docker.internal:8081']
+              labels: { service: shop-product }
+            - targets: ['host.docker.internal:8082']
+              labels: { service: shop-order }
+            - targets: ['host.docker.internal:8083']
+              labels: { service: shop-stock }
+            - targets: ['host.docker.internal:8085']   # shop-payment mgmt port
+              labels: { service: shop-payment }
+
+        - job_name: 'kafka-exporter'
+          static_configs:
+            - targets: ['kafka-exporter:9308']
+
+        - job_name: 'tempo'
+          static_configs:
+            - targets: ['tempo:3200']
+
 processors:
   batch:
     timeout: 2s
     send_batch_size: 1024
 
-  # 리소스 속성 표준화
+  # 리소스 속성 표준화 (traces / metrics / logs 공통)
   resource:
     attributes:
       - key: deployment.environment
@@ -67,6 +108,19 @@ exporters:
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
 
+  # ─── Prometheus 로 push (remote_write) ───
+  # Prometheus 는 --web.enable-remote-write-receiver 로 수신자 역할만 함.
+  # EKS 이주 시 이 endpoint 를 Mimir / AMP (Amazon Managed Prometheus) /
+  # Thanos receive 로 바꾸면 앱/Collector 다른 설정은 건드리지 않아도 됨.
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+    # resource attribute (service.name, deployment.environment 등)을 label 로 승격
+    resource_to_telemetry_conversion:
+      enabled: true
+    # 원본 Prometheus exposition 의 unknown / counter 타입 유지
+    target_info:
+      enabled: true
+
   debug:
     verbosity: basic
 
@@ -74,12 +128,26 @@ service:
   telemetry:
     logs:
       level: info
+    # Collector 자기 메트릭을 :8888 로 노출 (self-observability).
+    # Prometheus 가 이 엔드포인트만은 직접 scrape 해서 Collector 생존 감지.
+    metrics:
+      address: 0.0.0.0:8888
+
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch, resource, transform/saga_id, attributes/baggage]
       exporters: [otlp/tempo]
+
     logs:
       receivers: [otlp]
       processors: [batch, resource, transform/logs]
       exporters: [otlphttp/loki]
+
+    # metrics 파이프라인:
+    #   - otlp       : OTel Agent 가 push 하는 경우 대비 (현재 Agent 는 OTEL_METRICS_EXPORTER=none)
+    #   - prometheus : Collector 가 Actuator / kafka-exporter / tempo 를 scrape (현재 주 경로)
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [batch, resource]
+      exporters: [prometheusremotewrite]

@@ -1,9 +1,20 @@
-# Prometheus: 메트릭 수집 + remote_write 수신 활성화
-# - Spring Boot /actuator/prometheus (5개 서비스)
-# - kafka-exporter (consumer lag, broker 정보)
-# - Tempo metrics_generator (service graph, span metrics → remote_write push)
-# - OTel Collector 자기 메트릭 (8888)
-# 참고: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+# Prometheus — receiver 전용 (v2.1)
+# ──────────────────────────────────────────────────────────────────
+# v2.0 까지는 Prometheus 가 Spring Boot Actuator / kafka-exporter 를 직접 scrape 했음.
+# v2.1 에서 OTel Collector 를 Gateway 로 두는 k8s-ready 구조로 전환.
+#
+#   [앱]  --Actuator /prometheus-->  Collector  --remote_write-->  Prometheus
+#   [kafka-exporter]  --/metrics-->  Collector  --remote_write-->  Prometheus
+#   [Tempo metrics_generator]       --remote_write-->              Prometheus
+#
+# 장점:
+#   - EKS 이주 시 ServiceMonitor/PodMonitor 복잡도를 Collector 로 이전
+#   - TSDB 교체(Mimir/Thanos/AMP) 가 Collector exporter 한 줄 수정으로 끝남
+#   - Micrometer 네이티브 메트릭 이름 유지 → 기존 대시보드/PromQL 무수정
+#
+# remote_write 수신은 compose.yaml 의
+#   --web.enable-remote-write-receiver  플래그로 활성.
+# ──────────────────────────────────────────────────────────────────
 
 global:
   scrape_interval: 15s
@@ -12,43 +23,16 @@ global:
     cluster: shop-local
     env: dev
 
-# 타 시스템이 remote_write 로 밀어넣는 메트릭도 받는다 (Tempo → Prometheus)
-# 이 기능은 prometheus CLI 플래그 --web.enable-remote-write-receiver 로 켜야 함 (compose.yaml 에서 설정)
-
 scrape_configs:
-  # ─── Prometheus 자기 자신 ───────────────────────────────
+  # Prometheus 자기 자신
   - job_name: prometheus
     static_configs:
       - targets: ['localhost:9090']
 
-  # ─── Spring Boot 서비스들 (Actuator) ───────────────────
-  # 주의: Prometheus 가 컨테이너, 앱은 호스트에서 실행 → host.docker.internal 로 접근
-  - job_name: shop-services
-    metrics_path: /actuator/prometheus
-    scrape_interval: 10s
-    static_configs:
-      - targets: ['host.docker.internal:8080']
-        labels: { service: shop-user }
-      - targets: ['host.docker.internal:8081']
-        labels: { service: shop-product }
-      - targets: ['host.docker.internal:8082']
-        labels: { service: shop-order }
-      - targets: ['host.docker.internal:8083']
-        labels: { service: shop-stock }
-      - targets: ['host.docker.internal:8085']   # shop-payment 는 management 전용 포트
-        labels: { service: shop-payment }
-
-  # ─── Kafka consumer lag / broker 지표 ─────────────────
-  - job_name: kafka-exporter
-    static_configs:
-      - targets: ['kafka-exporter:9308']
-
-  # ─── OTel Collector 자기 상태 ─────────────────────────
+  # ─── 유일한 직접 scrape 대상: OTel Collector 자신 ───
+  # Collector 가 죽으면 모든 메트릭이 끊기므로, Collector 만큼은
+  # Prometheus 가 독립적으로 감지해야 한다 (self-observability 원칙).
+  # EKS 에서도 Collector Pod /metrics:8888 을 별도 scrape 하는 게 관행.
   - job_name: otel-collector
     static_configs:
       - targets: ['otel-collector:8888']
-
-  # ─── Tempo 자기 상태 ──────────────────────────────────
-  - job_name: tempo
-    static_configs:
-      - targets: ['tempo:3200']

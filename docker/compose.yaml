@@ -146,12 +146,16 @@ services:
     ports:
       - "24317:4317"   # gRPC OTLP (서비스가 여기로 전송)
       - "24318:4318"   # HTTP OTLP
-      - "28888:8888"   # collector 자체 메트릭
+      - "28888:8888"   # collector 자체 메트릭 (Prometheus 가 self-scrape)
     volumes:
       - ./otel-collector-config.yml:/etc/otelcol/otel-collector-config.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # 호스트 Spring Boot Actuator scrape 용
     depends_on:
       - tempo
       - loki
+      - prometheus      # remote_write 대상
+      - kafka-exporter  # prometheus receiver 가 scrape
 
   # ──────────────────────────────────────────
   # 메트릭 스택: Prometheus + Kafka Exporter
@@ -166,15 +170,14 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --storage.tsdb.retention.time=7d           # 로컬 개발: 7일
-      - --web.enable-remote-write-receiver         # Tempo metrics_generator 가 이리로 push
+      - --web.enable-remote-write-receiver         # Tempo metrics_generator 가 이리로 push # 이게 있어야 POST /api/v1/write 가 열림
       - --enable-feature=exemplar-storage          # Tempo ↔ Prometheus exemplar 연결
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./.data/prometheus:/prometheus
-    extra_hosts:
-      - "host.docker.internal:host-gateway"        # 호스트에서 실행 중인 Spring Boot 접근용 (Linux 호환)
-    depends_on:
-      - kafka-exporter
+    # v2.1: Prometheus 는 더이상 앱을 직접 scrape 하지 않음.
+    # Collector 가 Gateway 로 앱/exporter 를 scrape → remote_write 로 push.
+    # 단, Collector 자신의 :8888 만 prometheus 가 독립 scrape (self-observability).
 
   kafka-exporter:
     image: danielqsj/kafka-exporter:v1.7.0

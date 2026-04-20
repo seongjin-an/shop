@@ -147,17 +147,18 @@ transform/saga_id:
    활성) 를 통해 downstream Kafka consumer 로 자동 전파되고, Collector 의
    `attributes/baggage` 프로세서가 span attribute 로 승격한다.
 
-2. **메트릭 수집 미활성.**
-   현재 `OTEL_METRICS_EXPORTER=none`. Prometheus / Mimir 추가 후 `otlp` 로 변경 시
-   JVM / HTTP / Kafka lag / DB pool 메트릭이 자동 수집된다.
+2. ~~메트릭 수집 미활성.~~ **→ v2.1 에서 해결됨 (Collector Gateway 로 통합).**
+   Collector 의 `prometheus` receiver 가 Actuator / kafka-exporter / tempo 를 scrape 해서
+   `prometheusremotewrite` 로 Prometheus 에 push 한다. 상세는 [`METRICS-SETUP.md`](METRICS-SETUP.md).
+   앱에서 직접 OTLP push 로 가고 싶으면 `OTEL_METRICS_EXPORTER=otlp` 한 줄만 변경.
 
-3. **Service Graph / RED 메트릭 미활성.**
-   Tempo `metrics_generator.processor.service_graphs` 를 활성하려면 Prometheus 필요.
+3. **Service Graph / RED 메트릭** — v2.1 에서 Prometheus + Tempo `metrics_generator` 연동으로 활성.
+   Grafana → Explore → Tempo → Service Graph 탭에서 확인 가능.
 
 4. **Frontend RUM 미연결.**
    Next.js 에 `@opentelemetry/sdk-trace-web` + `@opentelemetry/exporter-trace-otlp-http`
    를 붙이면 브라우저 → Gateway → 백엔드 전체를 하나의 trace 로 이을 수 있다.
-   이건 Gateway(Phase 3) 도입 후 작업.
+   이건 API Gateway(로드맵) 도입 후 작업.
 
 ## 트러블슈팅
 

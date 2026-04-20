@@ -60,7 +60,11 @@ tasks.named('bootRun') {
         environment 'OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:24317'
         environment 'OTEL_EXPORTER_OTLP_PROTOCOL', 'grpc'
         environment 'OTEL_TRACES_EXPORTER', 'otlp'
-        environment 'OTEL_METRICS_EXPORTER', 'none'     // Phase 1: 트레이스만
+        // v2.1: 메트릭은 Micrometer + Actuator 가 담당하고 OTel Collector 의 prometheus receiver 가
+        // /actuator/prometheus 를 scrape 해서 remote_write 로 Prometheus 에 푸시한다.
+        // 여기서 Agent 가 또 OTLP metrics 를 내보내면 JVM/HTTP 지표가 중복되므로 none 으로 유지.
+        // 앱→Collector push 로 가고 싶으면 'otlp' 로 바꾸고 OTEL_METRIC_EXPORT_INTERVAL=15000 추가.
+        environment 'OTEL_METRICS_EXPORTER', 'none'
         environment 'OTEL_LOGS_EXPORTER', 'otlp'        // Collector -> Loki 네이티브 OTLP 경로
         environment 'OTEL_PROPAGATORS', 'tracecontext,baggage'
         environment 'OTEL_INSTRUMENTATION_KAFKA_EXPERIMENTAL_SPAN_ATTRIBUTES', 'true'
