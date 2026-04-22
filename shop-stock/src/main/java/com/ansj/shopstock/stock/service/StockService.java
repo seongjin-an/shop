@@ -110,4 +110,40 @@ public class StockService {
             stockEntity.reserve(itemMap.get(stockEntity.getProductId()));
         }
     }
+
+    // ─── per-item 버전 (productId 기반 파티셔닝으로 single-writer 보장) ───
+    //
+    // Kafka key = productId 로 변경된 이후 동일 productId 이벤트는
+    // 항상 동일 파티션 → 동일 consumer thread 로 직렬 처리된다.
+    // 즉 StockEntity 동시 write 가 사라지므로 @Retryable 은 안전망으로만 유지한다.
+
+    @Retryable(retryFor = {ObjectOptimisticLockingFailureException.class},
+            maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
+    @Transactional
+    public void reserveOne(UUID productId, int quantity) {
+        StockEntity stock = stockRepository.findByProductId(productId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "재고 정보가 없는 상품입니다. productId=" + productId));
+        stock.reserve(quantity);
+    }
+
+    @Retryable(retryFor = {ObjectOptimisticLockingFailureException.class},
+            maxAttempts = 5, backoff = @Backoff(delay = 50, multiplier = 2, maxDelay = 500))
+    @Transactional
+    public void confirmReservationOne(UUID productId, int quantity) {
+        StockEntity stock = stockRepository.findByProductId(productId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "재고 정보가 없는 상품입니다. productId=" + productId));
+        stock.confirmReservation(quantity);
+    }
+
+    @Retryable(retryFor = {ObjectOptimisticLockingFailureException.class},
+            maxAttempts = 5, backoff = @Backoff(delay = 50, multiplier = 2, maxDelay = 500))
+    @Transactional
+    public void cancelReservationOne(UUID productId, int quantity) {
+        StockEntity stock = stockRepository.findByProductId(productId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "재고 정보가 없는 상품입니다. productId=" + productId));
+        stock.cancelReservation(quantity);
+    }
 }

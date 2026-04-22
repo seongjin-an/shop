@@ -68,6 +68,21 @@ public class OrderEntity {
         this.orderItems.add(item);
     }
 
+    // ─── Aggregator 보조 메서드 ────────────────────────────────────────────────
+
+    /** 모든 아이템이 RESERVED 상태인지 검사 (payment-requested 발행 조건) */
+    public boolean allItemsReserved() {
+        if (this.orderItems.isEmpty()) return false;
+        return this.orderItems.stream()
+                .allMatch(it -> it.getReservationStatus() == OrderItemReservationStatus.RESERVED);
+    }
+
+    /** 하나라도 FAILED 가 있는지 (보상 fan-out 대상) */
+    public boolean hasAnyFailedItem() {
+        return this.orderItems.stream()
+                .anyMatch(it -> it.getReservationStatus() == OrderItemReservationStatus.FAILED);
+    }
+
     // ─── Saga 상태 전이 ────────────────────────────────────────────────────────
 
     /**

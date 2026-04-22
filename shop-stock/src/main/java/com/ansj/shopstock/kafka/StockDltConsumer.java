@@ -1,8 +1,9 @@
 package com.ansj.shopstock.kafka;
 
 import com.ansj.shopstock.common.JsonUtil;
-import com.ansj.shopstock.stock.event.inbound.OrderCancelledEvent;
-import com.ansj.shopstock.stock.event.inbound.PaymentSuccessEvent;
+import com.ansj.shopstock.stock.event.inbound.StockConfirmRequestedEvent;
+import com.ansj.shopstock.stock.event.inbound.StockReleaseRequestedEvent;
+import com.ansj.shopstock.stock.event.inbound.StockReservationRequestedEvent;
 import com.ansj.shopstock.usecase.DltRetryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,63 +30,94 @@ public class StockDltConsumer {
     private final DltRetryService dltRetryService;
     private final JsonUtil jsonUtil;
 
+    // ─── per-item 신규 DLT 리스너 ────────────────────────────────────────────
+
     @KafkaListener(
-            topics = "${shop.kafka.topics.payment-success-dlt.topic}",
-            groupId = "${shop.kafka.topics.payment-success-dlt.group-id}",
+            topics = "${shop.kafka.topics.stock-reservation-requested-dlt.topic}",
+            groupId = "${shop.kafka.topics.stock-reservation-requested-dlt.group-id}",
             containerFactory = "dltKafkaListenerContainerFactory"
     )
-    public void onPaymentSuccessDlt(ConsumerRecord<String, String> record) {
-        log.warn("[DLT] payment-success 재처리 시작. topic={}, partition={}, offset={}",
+    public void onStockReservationRequestedDlt(ConsumerRecord<String, String> record) {
+        log.warn("[DLT] stock-reservation-requested 재처리 시작. topic={}, partition={}, offset={}",
                 record.topic(), record.partition(), record.offset());
-
-        jsonUtil.fromJson(record.value(), PaymentSuccessEvent.class)
+        jsonUtil.fromJson(record.value(), StockReservationRequestedEvent.class)
                 .ifPresentOrElse(
                         event -> {
                             MDC.put("sagaId", event.getSagaId().toString());
                             try {
-                                // 3초~30초 간격으로 최대 10회 재시도 (DltRetryService)
-                                dltRetryService.retryPaymentSuccess(event);
-                                log.info("[DLT] payment-success 재처리 성공. sagaId={}", event.getSagaId());
+                                dltRetryService.retryStockReservationRequested(event);
+                                log.info("[DLT] stock-reservation-requested 재처리 성공. sagaId={}, productId={}",
+                                        event.getSagaId(), event.getProductId());
                             } catch (Exception e) {
-                                // 10회 모두 소진 → 수동 개입 필요
-                                // TODO: Slack / PagerDuty 알람 연동
-                                log.error("[DLT] payment-success 재처리 최종 실패 — 수동 개입 필요. " +
-                                          "sagaId={}, cause={}", event.getSagaId(), e.getMessage(), e);
+                                log.error("[DLT] stock-reservation-requested 재처리 최종 실패 — 수동 개입 필요. " +
+                                        "sagaId={}, productId={}, cause={}",
+                                        event.getSagaId(), event.getProductId(), e.getMessage(), e);
                             } finally {
                                 MDC.clear();
                             }
                         },
-                        () -> log.error("[DLT] payment-success 역직렬화 실패. payload={}", record.value())
+                        () -> log.error("[DLT] stock-reservation-requested 역직렬화 실패. payload={}", record.value())
                 );
     }
 
     @KafkaListener(
-            topics = "${shop.kafka.topics.order-cancelled-dlt.topic}",
-            groupId = "${shop.kafka.topics.order-cancelled-dlt.group-id}",
+            topics = "${shop.kafka.topics.stock-confirm-requested-dlt.topic}",
+            groupId = "${shop.kafka.topics.stock-confirm-requested-dlt.group-id}",
             containerFactory = "dltKafkaListenerContainerFactory"
     )
-    public void onOrderCancelledDlt(ConsumerRecord<String, String> record) {
-        log.warn("[DLT] order-canceled 재처리 시작. topic={}, partition={}, offset={}",
+    public void onStockConfirmRequestedDlt(ConsumerRecord<String, String> record) {
+        log.warn("[DLT] stock-confirm-requested 재처리 시작. topic={}, partition={}, offset={}",
                 record.topic(), record.partition(), record.offset());
-
-        jsonUtil.fromJson(record.value(), OrderCancelledEvent.class)
+        jsonUtil.fromJson(record.value(), StockConfirmRequestedEvent.class)
                 .ifPresentOrElse(
                         event -> {
                             MDC.put("sagaId", event.getSagaId().toString());
                             try {
-                                // 3초~30초 간격으로 최대 10회 재시도 (DltRetryService)
-                                dltRetryService.retryOrderCancelled(event);
-                                log.info("[DLT] order-canceled 재처리 성공. sagaId={}", event.getSagaId());
+                                dltRetryService.retryStockConfirmRequested(event);
+                                log.info("[DLT] stock-confirm-requested 재처리 성공. sagaId={}, productId={}",
+                                        event.getSagaId(), event.getProductId());
                             } catch (Exception e) {
-                                // 10회 모두 소진 → 수동 개입 필요
-                                // TODO: Slack / PagerDuty 알람 연동
-                                log.error("[DLT] order-canceled 재처리 최종 실패 — 수동 개입 필요. " +
-                                          "sagaId={}, cause={}", event.getSagaId(), e.getMessage(), e);
+                                log.error("[DLT] stock-confirm-requested 재처리 최종 실패 — 수동 개입 필요. " +
+                                        "sagaId={}, productId={}, cause={}",
+                                        event.getSagaId(), event.getProductId(), e.getMessage(), e);
                             } finally {
                                 MDC.clear();
                             }
                         },
-                        () -> log.error("[DLT] order-canceled 역직렬화 실패. payload={}", record.value())
+                        () -> log.error("[DLT] stock-confirm-requested 역직렬화 실패. payload={}", record.value())
                 );
     }
+
+    @KafkaListener(
+            topics = "${shop.kafka.topics.stock-release-requested-dlt.topic}",
+            groupId = "${shop.kafka.topics.stock-release-requested-dlt.group-id}",
+            containerFactory = "dltKafkaListenerContainerFactory"
+    )
+    public void onStockReleaseRequestedDlt(ConsumerRecord<String, String> record) {
+        log.warn("[DLT] stock-release-requested 재처리 시작. topic={}, partition={}, offset={}",
+                record.topic(), record.partition(), record.offset());
+        jsonUtil.fromJson(record.value(), StockReleaseRequestedEvent.class)
+                .ifPresentOrElse(
+                        event -> {
+                            MDC.put("sagaId", event.getSagaId().toString());
+                            try {
+                                dltRetryService.retryStockReleaseRequested(event);
+                                log.info("[DLT] stock-release-requested 재처리 성공. sagaId={}, productId={}",
+                                        event.getSagaId(), event.getProductId());
+                            } catch (Exception e) {
+                                log.error("[DLT] stock-release-requested 재처리 최종 실패 — 수동 개입 필요. " +
+                                        "sagaId={}, productId={}, cause={}",
+                                        event.getSagaId(), event.getProductId(), e.getMessage(), e);
+                            } finally {
+                                MDC.clear();
+                            }
+                        },
+                        () -> log.error("[DLT] stock-release-requested 역직렬화 실패. payload={}", record.value())
+                );
+    }
+
+    // ─── 레거시 DLT 리스너는 제거됨 ──────────────────────────────────────────
+    // shop-stock 은 더 이상 order-level payment-success / order-canceled 를
+    // 직접 소비하지 않으므로, 해당 DLT 로 들어올 메시지도 구조적으로 존재하지 않는다.
+    // 기존에 쌓여있던 DLT 메시지가 있다면 Kafka UI 에서 수동으로 삭제하거나 무시.
 }

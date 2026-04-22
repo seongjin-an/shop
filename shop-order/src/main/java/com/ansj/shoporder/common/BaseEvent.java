@@ -5,6 +5,9 @@ import com.ansj.shoporder.order.event.inbound.PaymentSuccessEvent;
 import com.ansj.shoporder.order.event.inbound.StockReserveFailedEvent;
 import com.ansj.shoporder.order.event.inbound.StockReservedEvent;
 import com.ansj.shoporder.order.event.outbound.OrderCreatedEvent;
+import com.ansj.shoporder.order.event.outbound.StockConfirmRequestedEvent;
+import com.ansj.shoporder.order.event.outbound.StockReleaseRequestedEvent;
+import com.ansj.shoporder.order.event.outbound.StockReservationRequestedEvent;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
@@ -15,6 +18,11 @@ import java.time.LocalDateTime;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "eventType", visible = true)
 @JsonSubTypes({
         @JsonSubTypes.Type(value = OrderCreatedEvent.class, name = MessageType.ORDER_CREATED),
+        // per-item stock lifecycle (outbound from shop-order)
+        @JsonSubTypes.Type(value = StockReservationRequestedEvent.class, name = MessageType.STOCK_RESERVATION_REQUESTED),
+        @JsonSubTypes.Type(value = StockConfirmRequestedEvent.class,     name = MessageType.STOCK_CONFIRM_REQUESTED),
+        @JsonSubTypes.Type(value = StockReleaseRequestedEvent.class,     name = MessageType.STOCK_RELEASE_REQUESTED),
+        // per-item stock result (inbound to shop-order)
         @JsonSubTypes.Type(value = StockReservedEvent.class, name = MessageType.STOCK_RESERVED),
         @JsonSubTypes.Type(value = StockReserveFailedEvent.class, name = MessageType.STOCK_RESERVE_FAILED),
         @JsonSubTypes.Type(value = PaymentSuccessEvent.class, name = MessageType.PAYMENT_SUCCESS),

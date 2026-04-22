@@ -16,7 +16,7 @@ spring:
       idle-timeout: 60000
       connection-timeout: 30000
   jpa:
-    show-sql: true
+    show-sql: false
     open-in-view: false
     hibernate:
       ddl-auto: update
@@ -71,18 +71,33 @@ management:
 shop:
   kafka:
     topics:
+      # ─── 레거시: 호환성 유지 (점진적 마이그레이션 대비) ───
       order-created:
         topic: order-created
         group-id: order-created-group
         concurrency: 1
+      order-cancelled:
+        topic: order-canceled
+
+      # ─── per-item stock lifecycle (outbound, key=productId) ───
+      stock-reservation-requested:
+        topic: stock-reservation-requested
+      stock-confirm-requested:
+        topic: stock-confirm-requested
+      stock-release-requested:
+        topic: stock-release-requested
+
+      # ─── per-item stock result (inbound from shop-stock) ───
       stock-reserved:
         topic: stock-reserved
         group-id: stock-reserved-order-group
-        concurrency: 1
+        concurrency: 3
       stock-reserve-failed:
         topic: stock-reserve-failed
         group-id: stock-reserve-failed-order-group
-        concurrency: 1
+        concurrency: 3
+
+      # ─── payment ───
       payment-requested:
         topic: payment-requested
       payment-success:
@@ -93,5 +108,3 @@ shop:
         topic: payment-failed
         group-id: payment-failed-order-group
         concurrency: 1
-      order-cancelled:
-        topic: order-canceled

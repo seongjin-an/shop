@@ -12,7 +12,6 @@ import com.ansj.shoppayment.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -35,7 +34,7 @@ public class ProcessPaymentUseCase {
 
     private final PaymentService paymentService;
     private final InboxEventService inboxEventService;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final SagaAwareKafkaPublisher kafkaPublisher;
     private final JsonUtil jsonUtil;
 
     public void process(PaymentRequestedEvent event) {
@@ -85,9 +84,10 @@ public class ProcessPaymentUseCase {
                 .occurredAt(LocalDateTime.now())
                 .build();
 
+        String sagaIdStr = event.getSagaId().toString();
         jsonUtil.toJson(successEvent)
                 .ifPresentOrElse(
-                        json -> kafkaTemplate.send(paymentSuccessTopic, event.getSagaId().toString(), json),
+                        json -> kafkaPublisher.send(paymentSuccessTopic, sagaIdStr, sagaIdStr, json),
                         () -> log.error("payment-success 직렬화 실패. sagaId={}", event.getSagaId())
                 );
     }
@@ -102,9 +102,10 @@ public class ProcessPaymentUseCase {
                 .reason(reason)
                 .build();
 
+        String sagaIdStr = event.getSagaId().toString();
         jsonUtil.toJson(failedEvent)
                 .ifPresentOrElse(
-                        json -> kafkaTemplate.send(paymentFailedTopic, event.getSagaId().toString(), json),
+                        json -> kafkaPublisher.send(paymentFailedTopic, sagaIdStr, sagaIdStr, json),
                         () -> log.error("payment-failed 직렬화 실패. sagaId={}", event.getSagaId())
                 );
     }

@@ -1,0 +1,28 @@
+### 상품 등록
+POST http://localhost:8081/api/products
+Content-Type: application/json
+
+{
+  "productName": "VitaminA",
+  "quantity": 1000000,
+  "productDesc": "z",
+  "productPrice": 30000
+}
+
+
+### 주문 생성
+POST http://localhost:8082/orders
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "deliveryAddress": "z",
+  "items": [
+    {
+      "productId": "019db2da-3e4a-77d9-aa0e-1abc1dde42cf",
+      "quantity": 1,
+      "unitPrice": 30000,
+      "productName": "VitaminA"
+    }
+  ]
+}

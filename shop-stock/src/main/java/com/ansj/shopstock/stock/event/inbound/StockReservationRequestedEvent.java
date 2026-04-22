@@ -1,6 +1,6 @@
-package com.ansj.shoporder.order.event.inbound;
+package com.ansj.shopstock.stock.event.inbound;
 
-import com.ansj.shoporder.common.*;
+import com.ansj.shopstock.common.*;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
@@ -9,31 +9,28 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * 단일 아이템 예약 실패 결과 (shop-stock → shop-order).
+ * 단일 상품 재고 예약 요청 (shop-order → shop-stock, key=productId).
  */
 @Getter
-public class StockReserveFailedEvent extends BaseEvent {
+public class StockReservationRequestedEvent extends BaseEvent {
 
     private final UUID productId;
-    private final UUID orderItemId;
     private final int  quantity;
-    private final String reason;
+    private final UUID orderItemId;
 
     @JsonCreator
-    public StockReserveFailedEvent(
+    public StockReservationRequestedEvent(
             @JsonProperty("eventId") EventId eventId,
             @JsonProperty("sagaId") SagaId sagaId,
             @JsonProperty("aggregateId") AggregateId aggregateId,
             @JsonProperty("aggregateType") String aggregateType,
             @JsonProperty("occurredAt") LocalDateTime occurredAt,
             @JsonProperty("productId") UUID productId,
-            @JsonProperty("orderItemId") UUID orderItemId,
             @JsonProperty("quantity") int quantity,
-            @JsonProperty("reason") String reason) {
-        super(MessageType.STOCK_RESERVE_FAILED, eventId, sagaId, aggregateId, aggregateType, occurredAt);
+            @JsonProperty("orderItemId") UUID orderItemId) {
+        super(MessageType.STOCK_RESERVATION_REQUESTED, eventId, sagaId, aggregateId, aggregateType, occurredAt);
         this.productId = productId;
-        this.orderItemId = orderItemId;
         this.quantity = quantity;
-        this.reason = reason;
+        this.orderItemId = orderItemId;
     }
 }

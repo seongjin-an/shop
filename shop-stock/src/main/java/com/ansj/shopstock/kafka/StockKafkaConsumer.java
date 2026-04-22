@@ -1,10 +1,10 @@
 package com.ansj.shopstock.kafka;
 
 import com.ansj.shopstock.common.JsonUtil;
-import com.ansj.shopstock.stock.event.inbound.OrderCancelledEvent;
-import com.ansj.shopstock.stock.event.inbound.OrderCreatedEvent;
-import com.ansj.shopstock.stock.event.inbound.PaymentSuccessEvent;
 import com.ansj.shopstock.stock.event.inbound.ProductCreatedEvent;
+import com.ansj.shopstock.stock.event.inbound.StockConfirmRequestedEvent;
+import com.ansj.shopstock.stock.event.inbound.StockReleaseRequestedEvent;
+import com.ansj.shopstock.stock.event.inbound.StockReservationRequestedEvent;
 import com.ansj.shopstock.usecase.CompensateStockUseCase;
 import com.ansj.shopstock.usecase.ReserveStockUseCase;
 import com.ansj.shopstock.usecase.StockUseCase;
@@ -16,6 +16,12 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 
+/**
+ * 재고 서비스 Kafka 소비자.
+ *
+ * <p>per-item 리스너(key=productId)만 유지.
+ * product-created 는 별도의 관리 토픽이라 order-level 로 유지.
+ */
 @Slf4j
 @RequiredArgsConstructor
 @Service
@@ -25,6 +31,8 @@ public class StockKafkaConsumer {
     private final ReserveStockUseCase reserveStockUseCase;
     private final CompensateStockUseCase compensateStockUseCase;
     private final JsonUtil jsonUtil;
+
+    // ─── product ─────────────────────────────────────────────────────────────
 
     @KafkaListener(
             topics = "${shop.kafka.topics.product-created.topic}",
@@ -46,44 +54,46 @@ public class StockKafkaConsumer {
         }
     }
 
+    // ─── per-item 신규 흐름 ──────────────────────────────────────────────────
+
     @KafkaListener(
-            topics = "${shop.kafka.topics.order-created.topic}",
-            groupId = "${shop.kafka.topics.order-created.group-id}",
-            concurrency = "${shop.kafka.topics.order-created.concurrency}"
+            topics = "${shop.kafka.topics.stock-reservation-requested.topic}",
+            groupId = "${shop.kafka.topics.stock-reservation-requested.group-id}",
+            concurrency = "${shop.kafka.topics.stock-reservation-requested.concurrency}"
     )
-    public void onOrderCreated(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void onStockReservationRequested(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
         try {
-            jsonUtil.fromJson(record.value(), OrderCreatedEvent.class)
+            jsonUtil.fromJson(record.value(), StockReservationRequestedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
-                        reserveStockUseCase.processOrderCreatedEvent(event);
+                        reserveStockUseCase.processReservationRequested(event);
                     });
+            acknowledgment.acknowledge();
         } catch (Exception e) {
-            log.error("order-created 처리 중 오류. cause: {}", e.getMessage(), e);
+            log.error("stock-reservation-requested 처리 중 오류. topic={}, offset={}, cause={}",
+                    record.topic(), record.offset(), e.getMessage(), e);
+            throw e; // DefaultErrorHandler → 재시도 → DLT
         } finally {
             MDC.clear();
-            acknowledgment.acknowledge();
         }
     }
 
     @KafkaListener(
-            topics = "${shop.kafka.topics.payment-success.topic}",
-            groupId = "${shop.kafka.topics.payment-success.group-id}",
-            concurrency = "${shop.kafka.topics.payment-success.concurrency}"
+            topics = "${shop.kafka.topics.stock-confirm-requested.topic}",
+            groupId = "${shop.kafka.topics.stock-confirm-requested.group-id}",
+            concurrency = "${shop.kafka.topics.stock-confirm-requested.concurrency}"
     )
-    public void onPaymentSuccess(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void onStockConfirmRequested(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
         try {
-            jsonUtil.fromJson(record.value(), PaymentSuccessEvent.class)
+            jsonUtil.fromJson(record.value(), StockConfirmRequestedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
-                        compensateStockUseCase.onPaymentSuccess(event);
+                        compensateStockUseCase.onStockConfirmRequested(event);
                     });
-            // 성공 시에만 ack → 실패 시 DefaultErrorHandler 가 재시도 후 오프셋 커밋
             acknowledgment.acknowledge();
         } catch (Exception e) {
-            log.error("payment-success 처리 중 오류. topic={}, offset={}, cause={}",
+            log.error("stock-confirm-requested 처리 중 오류. topic={}, offset={}, cause={}",
                     record.topic(), record.offset(), e.getMessage(), e);
-            // ack 하지 않음 → DefaultErrorHandler 로 위임
             throw e;
         } finally {
             MDC.clear();
@@ -91,26 +101,33 @@ public class StockKafkaConsumer {
     }
 
     @KafkaListener(
-            topics = "${shop.kafka.topics.order-cancelled.topic}",
-            groupId = "${shop.kafka.topics.order-cancelled.group-id}",
-            concurrency = "${shop.kafka.topics.order-cancelled.concurrency}"
+            topics = "${shop.kafka.topics.stock-release-requested.topic}",
+            groupId = "${shop.kafka.topics.stock-release-requested.group-id}",
+            concurrency = "${shop.kafka.topics.stock-release-requested.concurrency}"
     )
-    public void onOrderCancelled(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void onStockReleaseRequested(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
         try {
-            jsonUtil.fromJson(record.value(), OrderCancelledEvent.class)
+            jsonUtil.fromJson(record.value(), StockReleaseRequestedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
-                        compensateStockUseCase.onOrderCancelled(event);
+                        compensateStockUseCase.onStockReleaseRequested(event);
                     });
-            // 성공 시에만 ack → 실패 시 DefaultErrorHandler 가 재시도 후 오프셋 커밋
             acknowledgment.acknowledge();
         } catch (Exception e) {
-            log.error("order-cancelled 처리 중 오류. topic={}, offset={}, cause={}",
+            log.error("stock-release-requested 처리 중 오류. topic={}, offset={}, cause={}",
                     record.topic(), record.offset(), e.getMessage(), e);
-            // ack 하지 않음 → DefaultErrorHandler 로 위임
             throw e;
         } finally {
             MDC.clear();
         }
     }
+
+    // ─── 레거시 order-level 리스너는 제거됨 ──────────────────────────────────
+    // shop-order 가 order-created / payment-success(→stock) / order-canceled 를
+    // 'order-level' 로 더 이상 발행하지 않기 때문에,
+    //  - onOrderCreatedLegacy
+    //  - onPaymentSuccessLegacy  (inbox 에 ORDER_CREATED 페이로드가 없어 항상 실패)
+    //  - onOrderCancelledLegacy
+    // 세 리스너는 완전히 제거했다. 토픽 자체는 유지하되 shop-stock 이 구독하지 않음.
+    // payment-success 는 이제 shop-order 가 구독 → per-item stock-confirm-requested fan-out.
 }

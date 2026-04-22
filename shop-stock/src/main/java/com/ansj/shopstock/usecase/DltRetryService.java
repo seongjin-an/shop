@@ -1,7 +1,8 @@
 package com.ansj.shopstock.usecase;
 
-import com.ansj.shopstock.stock.event.inbound.OrderCancelledEvent;
-import com.ansj.shopstock.stock.event.inbound.PaymentSuccessEvent;
+import com.ansj.shopstock.stock.event.inbound.StockConfirmRequestedEvent;
+import com.ansj.shopstock.stock.event.inbound.StockReleaseRequestedEvent;
+import com.ansj.shopstock.stock.event.inbound.StockReservationRequestedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;
@@ -25,32 +26,35 @@ import org.springframework.stereotype.Service;
 public class DltRetryService {
 
     private final CompensateStockUseCase compensateStockUseCase;
+    private final ReserveStockUseCase reserveStockUseCase;
 
-    /**
-     * payment-success DLT 재처리.
-     * 3초 간격으로 최대 10회 재시도 (최대 대기 약 30초).
-     */
-    @Retryable(
-            retryFor = Exception.class,
-            maxAttempts = 10,
-            backoff = @Backoff(delay = 3_000, multiplier = 1.5, maxDelay = 30_000)
-    )
-    public void retryPaymentSuccess(PaymentSuccessEvent event) {
-        log.debug("[DLT-Retry] payment-success 재시도 중. sagaId={}", event.getSagaId());
-        compensateStockUseCase.onPaymentSuccess(event);
+    // ─── per-item 신규 DLT 재처리 ────────────────────────────────────────────
+
+    @Retryable(retryFor = Exception.class, maxAttempts = 10,
+            backoff = @Backoff(delay = 3_000, multiplier = 1.5, maxDelay = 30_000))
+    public void retryStockReservationRequested(StockReservationRequestedEvent event) {
+        log.debug("[DLT-Retry] stock-reservation-requested 재시도. sagaId={}, productId={}",
+                event.getSagaId(), event.getProductId());
+        reserveStockUseCase.processReservationRequested(event);
     }
 
-    /**
-     * order-canceled DLT 재처리.
-     * 3초 간격으로 최대 10회 재시도 (최대 대기 약 30초).
-     */
-    @Retryable(
-            retryFor = Exception.class,
-            maxAttempts = 10,
-            backoff = @Backoff(delay = 3_000, multiplier = 1.5, maxDelay = 30_000)
-    )
-    public void retryOrderCancelled(OrderCancelledEvent event) {
-        log.debug("[DLT-Retry] order-canceled 재시도 중. sagaId={}", event.getSagaId());
-        compensateStockUseCase.onOrderCancelled(event);
+    @Retryable(retryFor = Exception.class, maxAttempts = 10,
+            backoff = @Backoff(delay = 3_000, multiplier = 1.5, maxDelay = 30_000))
+    public void retryStockConfirmRequested(StockConfirmRequestedEvent event) {
+        log.debug("[DLT-Retry] stock-confirm-requested 재시도. sagaId={}, productId={}",
+                event.getSagaId(), event.getProductId());
+        compensateStockUseCase.onStockConfirmRequested(event);
     }
+
+    @Retryable(retryFor = Exception.class, maxAttempts = 10,
+            backoff = @Backoff(delay = 3_000, multiplier = 1.5, maxDelay = 30_000))
+    public void retryStockReleaseRequested(StockReleaseRequestedEvent event) {
+        log.debug("[DLT-Retry] stock-release-requested 재시도. sagaId={}, productId={}",
+                event.getSagaId(), event.getProductId());
+        compensateStockUseCase.onStockReleaseRequested(event);
+    }
+
+    // ─── 레거시 DLT 재처리는 제거됨 ─────────────────────────────────────────
+    // order-level payment-success / order-canceled DLT 는 더 이상 신규 메시지가
+    // 생성되지 않는다. 잔여 메시지가 있다면 Kafka UI 에서 수동 정리.
 }

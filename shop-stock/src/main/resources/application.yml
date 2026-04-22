@@ -72,27 +72,42 @@ shop:
         topic: product-created
         group-id: product-created-group
         concurrency: 1
-      order-created:
-        topic: order-created
-        group-id: order-created-stock-group
-        concurrency: 1
+
+      # ─── per-item stock lifecycle (inbound, key=productId) ───
+      # concurrency 는 파티션 수(3)와 맞춘다. productId 가 키이므로
+      # 동일 상품은 반드시 동일 파티션 → 동일 스레드로 흘러간다(단일-writer).
+      stock-reservation-requested:
+        topic: stock-reservation-requested
+        group-id: stock-reservation-requested-group
+        concurrency: 3
+      stock-confirm-requested:
+        topic: stock-confirm-requested
+        group-id: stock-confirm-requested-group
+        concurrency: 3
+      stock-release-requested:
+        topic: stock-release-requested
+        group-id: stock-release-requested-group
+        concurrency: 3
+
+      # 레거시 order-level 구독(order-created / payment-success / order-canceled)
+      # 및 관련 DLT 설정은 제거됨. per-item 흐름으로 완전 이관.
+
+      # ─── outbound (shop-stock → shop-order) ───
       stock-reserved:
         topic: stock-reserved
       stock-reserve-failed:
         topic: stock-reserve-failed
-      payment-success:
-        topic: payment-success
-        group-id: payment-success-stock-group
+
+      # ─── DLT (per-item 만 유지) ───
+      stock-reservation-requested-dlt:
+        topic: stock-reservation-requested-DLT
+        group-id: stock-reservation-requested-dlt-group
         concurrency: 1
-      order-cancelled:
-        topic: order-canceled
-        group-id: order-cancelled-stock-group
+      stock-confirm-requested-dlt:
+        topic: stock-confirm-requested-DLT
+        group-id: stock-confirm-requested-dlt-group
         concurrency: 1
-      payment-success-dlt:
-        topic: payment-success-DLT
-        group-id: payment-success-dlt-group
-        concurrency: 1
-      order-cancelled-dlt:
-        topic: order-canceled-DLT
-        group-id: order-cancelled-dlt-group
+      stock-release-requested-dlt:
+        topic: stock-release-requested-DLT
+        group-id: stock-release-requested-dlt-group
         concurrency: 1

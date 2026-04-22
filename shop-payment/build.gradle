@@ -36,6 +36,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.springframework.kafka:spring-kafka'
+
+    // OTel Baggage API — partitionKey 변경 시에도 saga.id 추적 유지용
+    // ※ Java Agent 는 shaded classloader 로 자기 내부 OTel API 를 감추므로 유저 코드에서 직접
+    //   Baggage 를 쓰려면 implementation 으로 런타임 classpath 에 포함시켜야 함.
+    implementation 'io.opentelemetry:opentelemetry-api:1.38.0'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'
     annotationProcessor 'org.projectlombok:lombok'
