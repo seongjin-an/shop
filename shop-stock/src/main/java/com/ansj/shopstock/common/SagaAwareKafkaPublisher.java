@@ -19,20 +19,23 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SagaAwareKafkaPublisher {
 
-    private static final String BAGGAGE_KEY_SAGA_ID = "saga.id";
+    private static final String BAGGAGE_KEY_SAGA_ID  = "saga.id";
+    private static final String BAGGAGE_KEY_TRACE_ID = "trace.id";
 
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public void send(String topic, String partitionKey, String sagaId, String json) {
-        Baggage baggage = Baggage.current().toBuilder()
-                .put(BAGGAGE_KEY_SAGA_ID, sagaId)
-                .build();
+    public void send(String topic, String partitionKey, String sagaId, String traceId, String json) {
+        var builder = Baggage.current().toBuilder().put(BAGGAGE_KEY_SAGA_ID, sagaId);
+        if (traceId != null) {
+            builder.put(BAGGAGE_KEY_TRACE_ID, traceId);
+        }
+        Baggage baggage = builder.build();
 
         try (Scope ignored = baggage.makeCurrent()) {
             kafkaTemplate.send(topic, partitionKey, json);
         } catch (Exception e) {
-            log.error("Kafka 발행 실패. topic={}, partitionKey={}, sagaId={}, cause={}",
-                    topic, partitionKey, sagaId, e.getMessage(), e);
+            log.error("Kafka 발행 실패. topic={}, partitionKey={}, sagaId={}, traceId={}, cause={}",
+                    topic, partitionKey, sagaId, traceId, e.getMessage(), e);
             throw e;
         }
     }

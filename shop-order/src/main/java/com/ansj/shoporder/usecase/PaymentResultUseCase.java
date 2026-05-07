@@ -22,16 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
-/**
- * 결제 결과 수신 → per-item 확정/해제 fan-out.
- *
- * <pre>
- *   payment-success → stock-confirm-requested (per-item, key=productId) fan-out → COMPLETED
- *   payment-failed  → stock-release-requested (per-item, key=productId) fan-out → CANCELLED
- * </pre>
- *
- * <p>기존의 order-level {@code order-canceled} 이벤트는 더 이상 사용하지 않는다(레거시 호환용으로만 남김).
- */
 @Slf4j
 @RequiredArgsConstructor
 @Transactional
@@ -49,9 +39,6 @@ public class PaymentResultUseCase {
     private final JsonUtil jsonUtil;
     private final SagaMetrics sagaMetrics;
 
-    /**
-     * payment-success 수신 → STOCK_RESERVED → COMPLETED + stock-confirm-requested fan-out
-     */
     public void onPaymentSuccess(PaymentSuccessEvent event) {
         OrderEntity order = orderService.getOrderBySagaId(event.getSagaId().id());
         order.paymentCompleted();
@@ -59,10 +46,10 @@ public class PaymentResultUseCase {
         sagaMetrics.recordTerminated("COMPLETED", order.getCreatedAt());
 
         String sagaIdStr = order.getSagaId().toString();
+        String traceId = event.getTraceId();
         for (OrderItemEntity item : order.getOrderItems()) {
-            // RESERVED 상태의 아이템만 확정 요청
             if (item.getReservationStatus() == OrderItemReservationStatus.RESERVED) {
-                publishConfirm(order, item, sagaIdStr);
+                publishConfirm(order, item, sagaIdStr, traceId);
                 item.markConfirmed();
             }
         }
@@ -70,23 +57,20 @@ public class PaymentResultUseCase {
                 event.getSagaId(), order.getOrderItems().size());
     }
 
-    /**
-     * payment-failed 수신 → STOCK_RESERVED → PAYMENT_FAILED → stock-release-requested fan-out → CANCELLED
-     */
     public void onPaymentFailed(PaymentFailedEvent event) {
         OrderEntity order = orderService.getOrderBySagaId(event.getSagaId().id());
         order.paymentFailed();
         sagaMetrics.recordTransition("STOCK_RESERVED", "PAYMENT_FAILED");
 
         String sagaIdStr = order.getSagaId().toString();
+        String traceId = event.getTraceId();
         for (OrderItemEntity item : order.getOrderItems()) {
             if (item.getReservationStatus() == OrderItemReservationStatus.RESERVED) {
-                publishRelease(order, item, sagaIdStr, "payment-failed");
+                publishRelease(order, item, sagaIdStr, traceId, "payment-failed");
                 item.markReleased();
             }
         }
 
-        // 보상 이벤트 발행 후 즉시 CANCELLED 로 전이 (stock 보상 응답을 기다리지 않음 — 기존 동작 유지)
         order.compensationCompleted();
         sagaMetrics.recordTransition("PAYMENT_FAILED", "CANCELLED");
         sagaMetrics.recordTerminated("CANCELLED", order.getCreatedAt());
@@ -96,7 +80,7 @@ public class PaymentResultUseCase {
 
     // ─── helpers ──────────────────────────────────────────────────────────────
 
-    private void publishConfirm(OrderEntity order, OrderItemEntity item, String sagaIdStr) {
+    private void publishConfirm(OrderEntity order, OrderItemEntity item, String sagaIdStr, String traceId) {
         StockConfirmRequestedEvent confirmEvent = StockConfirmRequestedEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(SagaId.from(order.getSagaId()))
@@ -107,19 +91,21 @@ public class PaymentResultUseCase {
                 .quantity(item.getQuantity())
                 .orderItemId(item.getOrderItemId())
                 .build();
+        confirmEvent.setTraceId(traceId);
 
         jsonUtil.toJson(confirmEvent).ifPresentOrElse(
                 json -> kafkaPublisher.send(
                         stockConfirmRequestedTopic,
-                        item.getProductId().toString(),  // partition key = productId
+                        item.getProductId().toString(),
                         sagaIdStr,
+                        traceId,
                         json
                 ),
                 () -> log.error("stock-confirm-requested 직렬화 실패. orderItemId={}", item.getOrderItemId())
         );
     }
 
-    private void publishRelease(OrderEntity order, OrderItemEntity item, String sagaIdStr, String reason) {
+    private void publishRelease(OrderEntity order, OrderItemEntity item, String sagaIdStr, String traceId, String reason) {
         StockReleaseRequestedEvent releaseEvent = StockReleaseRequestedEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(SagaId.from(order.getSagaId()))
@@ -131,12 +117,14 @@ public class PaymentResultUseCase {
                 .orderItemId(item.getOrderItemId())
                 .reason(reason)
                 .build();
+        releaseEvent.setTraceId(traceId);
 
         jsonUtil.toJson(releaseEvent).ifPresentOrElse(
                 json -> kafkaPublisher.send(
                         stockReleaseRequestedTopic,
-                        item.getProductId().toString(),  // partition key = productId
+                        item.getProductId().toString(),
                         sagaIdStr,
+                        traceId,
                         json
                 ),
                 () -> log.error("stock-release-requested 직렬화 실패. orderItemId={}", item.getOrderItemId())

@@ -55,7 +55,6 @@ public class ProcessPaymentUseCase {
                 .status(PaymentStatus.PENDING)
                 .build();
 
-        // 가짜 PG 호출 시뮬레이션 (90% 성공)
         boolean success = RANDOM.nextInt(10) > 0;
 
         if (success) {
@@ -83,11 +82,12 @@ public class ProcessPaymentUseCase {
                 .aggregateType("ORDER")
                 .occurredAt(LocalDateTime.now())
                 .build();
+        successEvent.setTraceId(event.getTraceId());
 
         String sagaIdStr = event.getSagaId().toString();
         jsonUtil.toJson(successEvent)
                 .ifPresentOrElse(
-                        json -> kafkaPublisher.send(paymentSuccessTopic, sagaIdStr, sagaIdStr, json),
+                        json -> kafkaPublisher.send(paymentSuccessTopic, sagaIdStr, sagaIdStr, event.getTraceId(), json),
                         () -> log.error("payment-success 직렬화 실패. sagaId={}", event.getSagaId())
                 );
     }
@@ -101,11 +101,12 @@ public class ProcessPaymentUseCase {
                 .occurredAt(LocalDateTime.now())
                 .reason(reason)
                 .build();
+        failedEvent.setTraceId(event.getTraceId());
 
         String sagaIdStr = event.getSagaId().toString();
         jsonUtil.toJson(failedEvent)
                 .ifPresentOrElse(
-                        json -> kafkaPublisher.send(paymentFailedTopic, sagaIdStr, sagaIdStr, json),
+                        json -> kafkaPublisher.send(paymentFailedTopic, sagaIdStr, sagaIdStr, event.getTraceId(), json),
                         () -> log.error("payment-failed 직렬화 실패. sagaId={}", event.getSagaId())
                 );
     }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# shop-order / shop-stock / shop-payment 백그라운드 기동 스크립트
+# shop 전체 서비스 백그라운드 기동 스크립트
 # 사용법: ./start-services.sh
 #
 # 현재 쉘(zsh 등) 의 JAVA_HOME 을 자식 bash 에 그대로 전파한다.
@@ -55,6 +55,7 @@ start_service() {
 }
 
 echo ">>> shop 서비스 기동"
+start_service "shop-gateway"
 start_service "shop-user"
 start_service "shop-product"
 start_service "shop-stock"

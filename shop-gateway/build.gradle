@@ -32,10 +32,33 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
 
+    implementation 'io.opentelemetry:opentelemetry-api:1.38.0'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('bootRun') {
+    systemProperty 'LOG_PATH', "${projectDir}/logs"
+
+    def otelAgentJar = file("${projectDir}/../docker/agent/opentelemetry-javaagent.jar")
+    if (otelAgentJar.exists()) {
+        jvmArgs "-javaagent:${otelAgentJar.absolutePath}"
+        environment 'OTEL_SERVICE_NAME', project.name
+        environment 'OTEL_RESOURCE_ATTRIBUTES', "service.namespace=shop,deployment.environment=local"
+        environment 'OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:24317'
+        environment 'OTEL_EXPORTER_OTLP_PROTOCOL', 'grpc'
+        environment 'OTEL_TRACES_EXPORTER', 'otlp'
+        environment 'OTEL_METRICS_EXPORTER', 'none'
+        environment 'OTEL_LOGS_EXPORTER', 'otlp'
+        environment 'OTEL_PROPAGATORS', 'tracecontext,baggage'
+        environment 'OTEL_INSTRUMENTATION_LOGBACK_APPENDER_ENABLED', 'true'
+        environment 'OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_MDC_ATTRIBUTES', '*'
+    } else {
+        logger.lifecycle("[otel] agent 미설치 - docker/download-otel-agent.sh 실행 후 bootRun 재시작")
+    }
 }
 
 dependencyManagement {

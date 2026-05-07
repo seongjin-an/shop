@@ -7,6 +7,7 @@ import com.ansj.shopstock.stock.event.inbound.ProductCreatedEvent;
 import com.ansj.shopstock.stock.event.inbound.StockConfirmRequestedEvent;
 import com.ansj.shopstock.stock.event.inbound.StockReleaseRequestedEvent;
 import com.ansj.shopstock.stock.event.inbound.StockReservationRequestedEvent;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
@@ -34,6 +35,9 @@ public abstract class BaseEvent {
     private final String aggregateType;
     private final LocalDateTime occurredAt;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String traceId;
+
     protected BaseEvent(String eventType, EventId eventId, SagaId sagaId, AggregateId aggregateId, String aggregateType, LocalDateTime occurredAt) {
         this.eventId = eventId;
         this.sagaId = sagaId;
@@ -41,5 +45,9 @@ public abstract class BaseEvent {
         this.aggregateId = aggregateId;
         this.aggregateType = aggregateType;
         this.occurredAt = occurredAt;
+    }
+
+    public void setTraceId(String traceId) {
+        this.traceId = traceId;
     }
 }

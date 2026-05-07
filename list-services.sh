@@ -18,7 +18,7 @@ check_service() {
     printf "%-15s %-10s %-20s\n" "$SERVICE_NAME" "-" "STOPPED"
   fi
 }
-
+check_service "shop-gateway" "ShopGatewayApplication"
 check_service "shop-user" "ShopUserApplication"
 check_service "shop-product" "ShopProductApplication"
 check_service "shop-stock" "ShopStockApplication"

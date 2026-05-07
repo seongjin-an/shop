@@ -1,5 +1,5 @@
 #!/bin/bash
-# shop-order / shop-stock / shop-payment 프로세스 종료 스크립트
+# shop 전체 서비스 프로세스 종료 스크립트
 # 사용법: ./stop-services.sh
 
 # Gradle wrapper → Spring Boot JVM (자식) 구조이므로
@@ -26,6 +26,7 @@ stop_service() {
 }
 
 echo ">>> shop 서비스 종료"
+stop_service "shop-gateway"
 stop_service "shop-user"
 stop_service "shop-product"
 stop_service "shop-order"

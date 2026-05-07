@@ -21,23 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * 주문 생성 + per-item {@code stock-reservation-requested} 이벤트 fan-out.
- *
- * <p>변경 이전: 단일 {@code order-created} 이벤트(key=sagaId) 를 발행했다.
- * 이 방식은 서로 다른 주문이 동일한 상품을 예약할 때 각기 다른 파티션/스레드로
- * 흘러가 StockEntity 에 대한 낙관적 락 경합이 발생했다.
- *
- * <p>변경 이후: 주문 1건의 각 아이템에 대해 개별 이벤트를 발행한다.
- * <ul>
- *   <li>topic = {@code stock-reservation-requested}</li>
- *   <li>key   = productId (UUID.toString())</li>
- *   <li>baggage.saga.id = sagaId (Tempo 트레이스 상관관계 보존용)</li>
- * </ul>
- *
- * <p>동일 productId 이벤트는 항상 같은 파티션으로 라우팅되므로
- * shop-stock 쪽에서 동일 StockEntity 에 대한 동시 write 가 사라진다(single-writer-per-aggregate).
- */
 @Slf4j
 @RequiredArgsConstructor
 @Transactional
@@ -52,14 +35,17 @@ public class CreateOrderUseCase {
     private final JsonUtil jsonUtil;
     private final SagaMetrics sagaMetrics;
 
-    public UUID createOrder(CreateOrderRequest request) {
+    public UUID createOrder(CreateOrderRequest request, String traceId) {
+        // 게이트웨이 미경유(직접 호출) 시 자체 생성
         Orders order = orderService.createOrder(request);
         sagaMetrics.recordStarted();
         String sagaIdStr = order.getSagaId().toString();
         MDC.put("sagaId", sagaIdStr);
+        MDC.put("traceId", traceId);
+        traceId = traceId;
         try {
             for (OrderItem item : order.getItems()) {
-                publishReservationRequested(order, item, sagaIdStr);
+                publishReservationRequested(order, item, sagaIdStr, traceId);
             }
             return order.getOrderId();
         } finally {
@@ -67,7 +53,7 @@ public class CreateOrderUseCase {
         }
     }
 
-    private void publishReservationRequested(Orders order, OrderItem item, String sagaIdStr) {
+    private void publishReservationRequested(Orders order, OrderItem item, String sagaIdStr, String traceId) {
         StockReservationRequestedEvent event = StockReservationRequestedEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(SagaId.from(order.getSagaId()))
@@ -78,12 +64,14 @@ public class CreateOrderUseCase {
                 .quantity(item.getQuantity())
                 .orderItemId(item.getOrderItemId())
                 .build();
+        event.setTraceId(traceId);
 
         jsonUtil.toJson(event).ifPresentOrElse(
                 json -> kafkaPublisher.send(
                         stockReservationRequestedTopic,
-                        item.getProductId().toString(),  // partition key = productId
+                        item.getProductId().toString(),
                         sagaIdStr,
+                        traceId,
                         json
                 ),
                 () -> log.error("stock-reservation-requested 직렬화 실패. orderItemId={}", item.getOrderItemId())

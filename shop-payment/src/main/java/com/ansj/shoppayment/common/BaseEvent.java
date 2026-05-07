@@ -1,6 +1,7 @@
 package com.ansj.shoppayment.common;
 
 import com.ansj.shoppayment.payment.event.inbound.PaymentRequestedEvent;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
@@ -20,6 +21,9 @@ public abstract class BaseEvent {
     private final String aggregateType;
     private final LocalDateTime occurredAt;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String traceId;
+
     protected BaseEvent(String eventType, EventId eventId, SagaId sagaId,
                         AggregateId aggregateId, String aggregateType, LocalDateTime occurredAt) {
         this.eventType = eventType;
@@ -28,5 +32,9 @@ public abstract class BaseEvent {
         this.aggregateId = aggregateId;
         this.aggregateType = aggregateType;
         this.occurredAt = occurredAt;
+    }
+
+    public void setTraceId(String traceId) {
+        this.traceId = traceId;
     }
 }

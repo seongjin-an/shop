@@ -1,5 +1,6 @@
 package com.ansj.config;
 
+import io.opentelemetry.api.trace.Span;
 import java.util.UUID;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -18,15 +19,19 @@ public class TraceIdFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String traceId = exchange.getRequest().getHeaders().getFirst(TRACE_ID);
 
-        if (traceId == null) {
-            traceId = UUID.randomUUID().toString();
+        if (traceId == null || traceId.isBlank()) {
+            Span currentSpan = Span.current();
+            traceId = currentSpan.getSpanContext().isValid()
+                    ? currentSpan.getSpanContext().getTraceId()
+                    : UUID.randomUUID().toString();
         }
 
+        final String finalTraceId = traceId;
         ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
-            .header(TRACE_ID, traceId)
-            .build();
+                .header(TRACE_ID, finalTraceId)
+                .build();
 
-        exchange.getResponse().getHeaders().set(TRACE_ID, traceId);
+        exchange.getResponse().getHeaders().set(TRACE_ID, finalTraceId);
 
         return chain.filter(exchange.mutate().request(mutatedRequest).build());
     }

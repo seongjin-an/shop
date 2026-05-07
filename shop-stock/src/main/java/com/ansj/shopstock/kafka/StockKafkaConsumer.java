@@ -44,6 +44,7 @@ public class StockKafkaConsumer {
             jsonUtil.fromJson(record.value(), ProductCreatedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
+                        if (event.getTraceId() != null) MDC.put("traceId", event.getTraceId());
                         stockUseCase.processIncreaseStockEvent(event);
                     });
         } catch (Exception e) {
@@ -66,6 +67,7 @@ public class StockKafkaConsumer {
             jsonUtil.fromJson(record.value(), StockReservationRequestedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
+                        if (event.getTraceId() != null) MDC.put("traceId", event.getTraceId());
                         reserveStockUseCase.processReservationRequested(event);
                     });
             acknowledgment.acknowledge();
@@ -88,6 +90,7 @@ public class StockKafkaConsumer {
             jsonUtil.fromJson(record.value(), StockConfirmRequestedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
+                        if (event.getTraceId() != null) MDC.put("traceId", event.getTraceId());
                         compensateStockUseCase.onStockConfirmRequested(event);
                     });
             acknowledgment.acknowledge();
@@ -110,6 +113,7 @@ public class StockKafkaConsumer {
             jsonUtil.fromJson(record.value(), StockReleaseRequestedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
+                        if (event.getTraceId() != null) MDC.put("traceId", event.getTraceId());
                         compensateStockUseCase.onStockReleaseRequested(event);
                     });
             acknowledgment.acknowledge();

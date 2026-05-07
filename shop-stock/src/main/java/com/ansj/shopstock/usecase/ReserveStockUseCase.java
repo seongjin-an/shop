@@ -16,13 +16,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
-/**
- * per-item 재고 예약 유스케이스.
- *
- * <p>Kafka topic = {@code stock-reservation-requested}, key = productId.
- * 동일 productId 이벤트는 동일 파티션 → 동일 consumer thread 로 직렬 처리되므로
- * StockEntity 에 대한 동시 write 가 사라져 낙관적 락 충돌이 원천 차단된다.
- */
 @Slf4j
 @RequiredArgsConstructor
 @Component
@@ -68,12 +61,14 @@ public class ReserveStockUseCase {
                 .orderItemId(event.getOrderItemId())
                 .quantity(event.getQuantity())
                 .build();
+        reservedEvent.setTraceId(event.getTraceId());
 
         jsonUtil.toJson(reservedEvent).ifPresentOrElse(
                 json -> kafkaPublisher.send(
                         stockReservedTopic,
-                        event.getProductId().toString(),  // partition key = productId
+                        event.getProductId().toString(),
                         event.getSagaId().toString(),
+                        event.getTraceId(),
                         json
                 ),
                 () -> log.error("stock-reserved 직렬화 실패. sagaId={}", event.getSagaId())
@@ -92,12 +87,14 @@ public class ReserveStockUseCase {
                 .quantity(event.getQuantity())
                 .reason(reason)
                 .build();
+        failedEvent.setTraceId(event.getTraceId());
 
         jsonUtil.toJson(failedEvent).ifPresentOrElse(
                 json -> kafkaPublisher.send(
                         stockReserveFailedTopic,
                         event.getProductId().toString(),
                         event.getSagaId().toString(),
+                        event.getTraceId(),
                         json
                 ),
                 () -> log.error("stock-reserve-failed 직렬화 실패. sagaId={}", event.getSagaId())

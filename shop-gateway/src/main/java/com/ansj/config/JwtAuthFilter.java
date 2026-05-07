@@ -72,6 +72,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         String userId = claims.getSubject();
         String role = claims.get("role", String.class);
+        final String finalTraceId = request.getHeaders().getFirst("X-Trace-Id");
 
         return redisTemplate.hasKey(BLACKLIST_PREFIX + token)
             .doOnError(e -> log.warn("[JwtAuthFilter] Redis blacklist 조회 실패: {}", e.getMessage()))
@@ -85,6 +86,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                     .request(builder -> builder
                         .header("X-User-Id", userId)
                         .header("X-User-Role", role)
+                        .header("X-Trace-Id", finalTraceId)
                         .build())
                     .build();
                 return chain.filter(mutated);

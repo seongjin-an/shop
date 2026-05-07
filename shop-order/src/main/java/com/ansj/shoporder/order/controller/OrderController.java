@@ -20,8 +20,10 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    public ResponseEntity<Void> createOrder(@RequestBody CreateOrderRequest request) {
-        UUID orderId = createOrderUseCase.createOrder(request);
+    public ResponseEntity<Void> createOrder(
+            @RequestBody CreateOrderRequest request,
+            @RequestHeader(value = "X-Trace-Id", required = false) String traceId) {
+        UUID orderId = createOrderUseCase.createOrder(request, traceId);
         return ResponseEntity.created(URI.create("/orders/" + orderId)).build();
     }
 

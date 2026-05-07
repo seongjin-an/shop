@@ -27,28 +27,23 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SagaAwareKafkaPublisher {
 
-    private static final String BAGGAGE_KEY_SAGA_ID = "saga.id";
+    private static final String BAGGAGE_KEY_SAGA_ID  = "saga.id";
+    private static final String BAGGAGE_KEY_TRACE_ID = "trace.id";
 
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    /**
-     * Kafka 로 발행하면서 현재 컨텍스트의 OTel baggage 에 saga.id 를 주입한다.
-     *
-     * @param topic        Kafka topic 이름
-     * @param partitionKey partition 라우팅 키 (예: productId, sagaId 등 자유롭게)
-     * @param sagaId       트레이스 상관관계 보존용 sagaId
-     * @param json         직렬화된 event payload
-     */
-    public void send(String topic, String partitionKey, String sagaId, String json) {
-        Baggage baggage = Baggage.current().toBuilder()
-                .put(BAGGAGE_KEY_SAGA_ID, sagaId)
-                .build();
+    public void send(String topic, String partitionKey, String sagaId, String traceId, String json) {
+        var builder = Baggage.current().toBuilder().put(BAGGAGE_KEY_SAGA_ID, sagaId);
+        if (traceId != null) {
+            builder.put(BAGGAGE_KEY_TRACE_ID, traceId);
+        }
+        Baggage baggage = builder.build();
 
         try (Scope ignored = baggage.makeCurrent()) {
             kafkaTemplate.send(topic, partitionKey, json);
         } catch (Exception e) {
-            log.error("Kafka 발행 실패. topic={}, partitionKey={}, sagaId={}, cause={}",
-                    topic, partitionKey, sagaId, e.getMessage(), e);
+            log.error("Kafka 발행 실패. topic={}, partitionKey={}, sagaId={}, traceId={}, cause={}",
+                    topic, partitionKey, sagaId, traceId, e.getMessage(), e);
             throw e;
         }
     }

@@ -34,6 +34,7 @@ public class OrderKafkaConsumer {
             jsonUtil.fromJson(record.value(), StockReservedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
+                        if (event.getTraceId() != null) MDC.put("traceId", event.getTraceId());
                         stockReserveResultUseCase.onStockReserved(event);
                     });
         } catch (Exception e) {
