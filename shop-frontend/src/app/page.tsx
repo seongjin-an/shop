@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { requestUserInfo } from "@/services/api";
 import { getProducts } from "@/services/productService";
+import { clearAuth, getToken } from "@/services/authToken";
 import { createOrder } from "@/services/orderService";
 import { Product } from "@/types/product";
 import { CreateOrderItemRequest } from "@/types/order";
@@ -72,7 +73,14 @@ export default function Home() {
     }
 
     async function handleLogout() {
-        await fetch("/api/logout", { method: "POST", credentials: "include" });
+        const token = getToken();
+        if (token) {
+            await fetch("/gateway-api/user/api/users/logout", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            }).catch(() => {});
+        }
+        clearAuth();
         router.push("/login");
     }
 

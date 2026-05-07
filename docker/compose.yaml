@@ -17,13 +17,13 @@ services:
       - "16379:6379"
     volumes:
       - ./.data/redis:/data/
-#  redis-insight:
-#    image: redis/redisinsight:2.64.1
-#    restart: unless-stopped
-#    ports:
-#      - "15540:5540"
-#    volumes:
-#      - ./.data/redis-insight:/data
+  redis-insight:
+    image: redis/redisinsight:2.64.1
+    restart: unless-stopped
+    ports:
+      - "15540:5540"
+    volumes:
+      - ./.data/redis-insight:/data
   kafka:
     image: confluentinc/cp-kafka:7.5.1 # Apache Kafka 3.5.x = Confluent Platform 7.5.x
     container_name: kafka

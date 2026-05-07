@@ -1,19 +1,14 @@
-import {SignupRequest} from "@/types/user";
+import { SignupRequest } from "@/types/user";
 
-export const requestSignup = async (signupRequest: SignupRequest) => {
+export const requestSignup = async (signupRequest: SignupRequest): Promise<boolean> => {
     try {
-        console.log("signupRequest", signupRequest);
-        const res = await fetch(`/api/users/signup`,{
+        const res = await fetch("/gateway-api/user/api/users/signup", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(signupRequest)
-        })
-        console.log(res)
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(signupRequest),
+        });
         return res.ok;
-
-    } catch (error: unknown) {
+    } catch {
         return false;
     }
-}
+};

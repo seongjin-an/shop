@@ -86,7 +86,7 @@ export default function LoginPage() {
 
         try {
             const res = await fetch(
-                `/api/users/validate-username?username=${encodeURIComponent(value)}`,
+                `/gateway-api/user/api/users/validate-username?username=${encodeURIComponent(value)}`,
                 { method: "POST" }
             );
 

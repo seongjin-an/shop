@@ -9,7 +9,10 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Query("SELECT u FROM UserEntity u JOIN FETCH u.role WHERE u.userId = :id")
     Optional<UserEntity> findByIdFetching(Long id);
+
     boolean existsByUsername(String username);
+
+    @Query("SELECT u FROM UserEntity u JOIN FETCH u.role WHERE u.username = :username")
     Optional<UserEntity> findByUsername(String username);
 
     @Query("SELECT u FROM UserEntity u JOIN FETCH u.role WHERE u.username = :username")
