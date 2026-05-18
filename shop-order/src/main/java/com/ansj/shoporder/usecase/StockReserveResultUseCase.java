@@ -1,9 +1,9 @@
 package com.ansj.shoporder.usecase;
 
+import com.ansj.shoporder.box.service.OutboxEventService;
 import com.ansj.shoporder.common.AggregateId;
 import com.ansj.shoporder.common.EventId;
 import com.ansj.shoporder.common.JsonUtil;
-import com.ansj.shoporder.common.SagaAwareKafkaPublisher;
 import com.ansj.shoporder.common.SagaId;
 import com.ansj.shoporder.metrics.SagaMetrics;
 import com.ansj.shoporder.order.entity.OrderEntity;
@@ -39,7 +39,7 @@ public class StockReserveResultUseCase {
 
     private final OrderService orderService;
     private final OrderItemRepository orderItemRepository;
-    private final SagaAwareKafkaPublisher kafkaPublisher;
+    private final OutboxEventService outboxEventService;
     private final JsonUtil jsonUtil;
     private final SagaMetrics sagaMetrics;
 
@@ -59,7 +59,7 @@ public class StockReserveResultUseCase {
         if (order.getOrderStatus() == OrderStatus.STOCK_FAILED) {
             log.warn("뒤늦게 도착한 stock-reserved 를 보상 대상으로 처리. orderItemId={}, sagaId={}",
                     item.getOrderItemId(), event.getSagaId());
-            publishRelease(order, item, event.getTraceId(), "late-reserved-after-failure");
+            saveReleaseOutbox(order, item, event.getTraceId(), "late-reserved-after-failure");
             item.markReleased();
             orderItemRepository.save(item);
             return;
@@ -68,7 +68,7 @@ public class StockReserveResultUseCase {
         if (order.allItemsReserved() && order.getOrderStatus() == OrderStatus.PENDING) {
             order.stockReserved();
             sagaMetrics.recordTransition("PENDING", "STOCK_RESERVED");
-            publishPaymentRequested(order, event.getTraceId());
+            savePaymentRequestedOutbox(order, event.getTraceId());
         }
     }
 
@@ -96,7 +96,7 @@ public class StockReserveResultUseCase {
 
         for (OrderItemEntity it : order.getOrderItems()) {
             if (it.getReservationStatus() == OrderItemReservationStatus.RESERVED) {
-                publishRelease(order, it, event.getTraceId(), "partial-reserve-failed");
+                saveReleaseOutbox(order, it, event.getTraceId(), "partial-reserve-failed");
                 it.markReleased();
                 orderItemRepository.save(it);
             }
@@ -111,8 +111,8 @@ public class StockReserveResultUseCase {
                         "orderItem 이 존재하지 않습니다. orderItemId=" + orderItemId));
     }
 
-    private void publishPaymentRequested(OrderEntity order, String traceId) {
-        PaymentRequestedEvent paymentEvent = PaymentRequestedEvent.builder()
+    private void savePaymentRequestedOutbox(OrderEntity order, String traceId) {
+        PaymentRequestedEvent event = PaymentRequestedEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(SagaId.from(order.getSagaId()))
                 .aggregateId(AggregateId.from(order.getOrderId()))
@@ -121,22 +121,12 @@ public class StockReserveResultUseCase {
                 .userId(order.getUserId())
                 .totalAmount(order.getTotalAmount())
                 .build();
-        paymentEvent.setTraceId(traceId);
-
-        jsonUtil.toJson(paymentEvent).ifPresentOrElse(
-                json -> kafkaPublisher.send(
-                        paymentRequestedTopic,
-                        order.getSagaId().toString(),
-                        order.getSagaId().toString(),
-                        traceId,
-                        json
-                ),
-                () -> log.error("payment-requested 직렬화 실패. sagaId={}", order.getSagaId())
-        );
+        event.setTraceId(traceId);
+        outboxEventService.save(event, paymentRequestedTopic, order.getSagaId().toString());
     }
 
-    private void publishRelease(OrderEntity order, OrderItemEntity item, String traceId, String reason) {
-        StockReleaseRequestedEvent releaseEvent = StockReleaseRequestedEvent.builder()
+    private void saveReleaseOutbox(OrderEntity order, OrderItemEntity item, String traceId, String reason) {
+        StockReleaseRequestedEvent event = StockReleaseRequestedEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(SagaId.from(order.getSagaId()))
                 .aggregateId(AggregateId.from(order.getOrderId()))
@@ -147,17 +137,8 @@ public class StockReserveResultUseCase {
                 .orderItemId(item.getOrderItemId())
                 .reason(reason)
                 .build();
-        releaseEvent.setTraceId(traceId);
-
-        jsonUtil.toJson(releaseEvent).ifPresentOrElse(
-                json -> kafkaPublisher.send(
-                        stockReleaseRequestedTopic,
-                        item.getProductId().toString(),
-                        order.getSagaId().toString(),
-                        traceId,
-                        json
-                ),
-                () -> log.error("stock-release-requested 직렬화 실패. orderItemId={}", item.getOrderItemId())
-        );
+        event.setTraceId(traceId);
+        outboxEventService.save(event, stockReleaseRequestedTopic,
+                item.getProductId().toString());
     }
 }

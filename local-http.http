@@ -1,6 +1,37 @@
-### 상품 등록
-POST http://localhost:8081/api/products
+### 사용자 로그인
+POST http://localhost:8090/user/api/users/login
 Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin"
+}
+
+### 사용자 정보 me
+GET http://localhost:8090/user/api/users/me
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfQURNSU4iLCJpYXQiOjE3NzkwODAzMTEsImV4cCI6MTc3OTA4MjExMX0.5KdIY7lKocknBbb6t3yeWwUoxw-UnRyVQHg1IAGSmkM
+X-User-Id: 1
+
+### 리프레쉬
+POST http://localhost:8090/user/api/users/reissue
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfQURNSU4iLCJpYXQiOjE3NzkwNzk3MDEsImV4cCI6MTc3OTA4MTUwMX0.FUCXYZ5laHcK16qjh_KXbuTh9sgf-4xMVDvepr6gkvc
+
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzc5MDc5NzAxLCJleHAiOjE3Nzk2ODQ1MDF9.yoqGD-MSpuGL8PYDMygXXuN8_gsCPz4n9OsmRNfU1f0"
+}
+
+### 로그아웃
+POST http://localhost:8090/user/api/users/logout
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfQURNSU4iLCJpYXQiOjE3NzkwODAzMTEsImV4cCI6MTc3OTA4MjExMX0.5KdIY7lKocknBbb6t3yeWwUoxw-UnRyVQHg1IAGSmkM
+
+
+### 상품 등록
+POST http://localhost:8090/product/api/products
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfQURNSU4iLCJpYXQiOjE3NzkwODA0MzEsImV4cCI6MTc3OTA4MjIzMX0.dGN9M7yZ7cyjolprcsK0YAubaNFHkDNc37fVsY2WleM
 
 {
   "productName": "VitaminA",
@@ -9,17 +40,24 @@ Content-Type: application/json
   "productPrice": 30000
 }
 
+### 상품 조회
+GET http://localhost:8090/product/api/products
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfQURNSU4iLCJpYXQiOjE3NzkwODA0MzEsImV4cCI6MTc3OTA4MjIzMX0.dGN9M7yZ7cyjolprcsK0YAubaNFHkDNc37fVsY2WleM
+
+page=0&size=20
+
 
 ### 주문 생성
-POST http://localhost:8082/orders
+POST http://localhost:8090/order/orders
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfQURNSU4iLCJpYXQiOjE3NzkwODA0MzEsImV4cCI6MTc3OTA4MjIzMX0.dGN9M7yZ7cyjolprcsK0YAubaNFHkDNc37fVsY2WleM
 
 {
   "userId": 1,
   "deliveryAddress": "z",
   "items": [
     {
-      "productId": "019db2da-3e4a-77d9-aa0e-1abc1dde42cf",
+      "productId": "019e3979-791a-7ca1-9143-dd531f0987d6",
       "quantity": 1,
       "unitPrice": 30000,
       "productName": "VitaminA"

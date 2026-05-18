@@ -1,19 +1,16 @@
 package com.ansj.shopstock.box.service;
 
-import com.ansj.shopstock.common.*;
 import com.ansj.shopstock.box.entity.OutboxEventEntity;
 import com.ansj.shopstock.box.repository.OutboxEventRepository;
-import com.ansj.shopstock.stock.event.outbound.StockReservedEvent;
+import com.ansj.shopstock.common.BaseEvent;
+import com.ansj.shopstock.common.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 @Slf4j
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 @Service
 public class OutboxEventService {
 
@@ -21,27 +18,19 @@ public class OutboxEventService {
     private final JsonUtil jsonUtil;
 
     @Transactional
-    public void stockReservedEvent(SagaId sagaId, AggregateId aggregateId) {
-        EventId eventId = EventId.newId();
-        String aggregateType = "STOCK";
-        LocalDateTime now = LocalDateTime.now();
-        StockReservedEvent stockReservedEvent = StockReservedEvent.builder()
-                .eventId(eventId)
-                .sagaId(sagaId)
-                .aggregateId(aggregateId)
-                .aggregateType(aggregateType)
-                .occurredAt(now)
-                .build();
-
-        String payload = jsonUtil.toJson(stockReservedEvent).orElseThrow(RuntimeException::new);
-        OutboxEventEntity outboxEventEntity = OutboxEventEntity.builder()
-                .eventId(eventId.id())
-                .sagaId(sagaId.id())
-                .eventType(MessageType.STOCK_RESERVED)
-                .aggregateId(aggregateId.id())
-                .aggregateType(aggregateType)
+    public void save(BaseEvent event, String destinationTopic, String partitionKey) {
+        String payload = jsonUtil.toJson(event)
+                .orElseThrow(() -> new IllegalStateException("outbox 직렬화 실패. eventId=" + event.getEventId()));
+        OutboxEventEntity entity = OutboxEventEntity.builder()
+                .eventId(event.getEventId().id())
+                .sagaId(event.getSagaId().id())
+                .eventType(event.getEventType())
+                .aggregateType(event.getAggregateType())
+                .aggregateId(event.getAggregateId().id())
                 .payload(payload)
+                .destinationTopic(destinationTopic)
+                .partitionKey(partitionKey)
                 .build();
-        outboxEventRepository.save(outboxEventEntity);
+        outboxEventRepository.save(entity);
     }
 }

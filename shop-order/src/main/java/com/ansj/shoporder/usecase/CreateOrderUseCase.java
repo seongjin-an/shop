@@ -1,9 +1,9 @@
 package com.ansj.shoporder.usecase;
 
+import com.ansj.shoporder.box.service.OutboxEventService;
 import com.ansj.shoporder.common.AggregateId;
 import com.ansj.shoporder.common.EventId;
 import com.ansj.shoporder.common.JsonUtil;
-import com.ansj.shoporder.common.SagaAwareKafkaPublisher;
 import com.ansj.shoporder.common.SagaId;
 import com.ansj.shoporder.metrics.SagaMetrics;
 import com.ansj.shoporder.order.dto.CreateOrderRequest;
@@ -31,21 +31,19 @@ public class CreateOrderUseCase {
     private String stockReservationRequestedTopic;
 
     private final OrderService orderService;
-    private final SagaAwareKafkaPublisher kafkaPublisher;
+    private final OutboxEventService outboxEventService;
     private final JsonUtil jsonUtil;
     private final SagaMetrics sagaMetrics;
 
     public UUID createOrder(CreateOrderRequest request, String traceId) {
-        // 게이트웨이 미경유(직접 호출) 시 자체 생성
         Orders order = orderService.createOrder(request);
         sagaMetrics.recordStarted();
         String sagaIdStr = order.getSagaId().toString();
         MDC.put("sagaId", sagaIdStr);
         MDC.put("traceId", traceId);
-        traceId = traceId;
         try {
             for (OrderItem item : order.getItems()) {
-                publishReservationRequested(order, item, sagaIdStr, traceId);
+                saveReservationOutbox(order, item, traceId);
             }
             return order.getOrderId();
         } finally {
@@ -53,7 +51,7 @@ public class CreateOrderUseCase {
         }
     }
 
-    private void publishReservationRequested(Orders order, OrderItem item, String sagaIdStr, String traceId) {
+    private void saveReservationOutbox(Orders order, OrderItem item, String traceId) {
         StockReservationRequestedEvent event = StockReservationRequestedEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(SagaId.from(order.getSagaId()))
@@ -66,15 +64,8 @@ public class CreateOrderUseCase {
                 .build();
         event.setTraceId(traceId);
 
-        jsonUtil.toJson(event).ifPresentOrElse(
-                json -> kafkaPublisher.send(
-                        stockReservationRequestedTopic,
-                        item.getProductId().toString(),
-                        sagaIdStr,
-                        traceId,
-                        json
-                ),
-                () -> log.error("stock-reservation-requested 직렬화 실패. orderItemId={}", item.getOrderItemId())
-        );
+        // 주문 저장과 동일 트랜잭션 내에서 outbox INSERT → Debezium이 Kafka로 발행
+        outboxEventService.save(event, stockReservationRequestedTopic,
+                item.getProductId().toString());
     }
 }

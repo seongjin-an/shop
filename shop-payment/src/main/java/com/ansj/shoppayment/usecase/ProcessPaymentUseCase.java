@@ -1,6 +1,7 @@
 package com.ansj.shoppayment.usecase;
 
 import com.ansj.shoppayment.box.service.InboxEventService;
+import com.ansj.shoppayment.box.service.OutboxEventService;
 import com.ansj.shoppayment.common.*;
 import com.ansj.shoppayment.payment.entity.PaymentEntity;
 import com.ansj.shoppayment.payment.entity.PaymentMethod;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Random;
@@ -34,9 +36,10 @@ public class ProcessPaymentUseCase {
 
     private final PaymentService paymentService;
     private final InboxEventService inboxEventService;
-    private final SagaAwareKafkaPublisher kafkaPublisher;
+    private final OutboxEventService outboxEventService;
     private final JsonUtil jsonUtil;
 
+    @Transactional
     public void process(PaymentRequestedEvent event) {
         if (inboxEventService.existsByEventId(event.getEventId())) {
             log.info("중복 이벤트 무시. eventId={}", event.getEventId());
@@ -55,6 +58,7 @@ public class ProcessPaymentUseCase {
                 .status(PaymentStatus.PENDING)
                 .build();
 
+        String sagaIdStr = event.getSagaId().toString();
         boolean success = RANDOM.nextInt(10) > 0;
 
         if (success) {
@@ -63,18 +67,23 @@ public class ProcessPaymentUseCase {
             payment.complete(pgTransactionId, pgAuthCode);
             paymentService.save(payment);
             inboxEventService.createInboxEvent(event);
-            publishPaymentSuccess(event);
+
+            PaymentSuccessEvent successEvent = buildSuccessEvent(event);
+            // 결제 저장 + inbox + outbox 를 동일 트랜잭션으로 커밋 → Debezium이 Kafka 발행 보장
+            outboxEventService.save(successEvent, paymentSuccessTopic, sagaIdStr);
             log.info("결제 성공. sagaId={}, pgTransactionId={}", event.getSagaId(), pgTransactionId);
         } else {
             payment.fail("INSUFFICIENT_BALANCE", "잔액이 부족합니다 (시뮬레이션)");
             paymentService.save(payment);
             inboxEventService.createInboxEvent(event);
-            publishPaymentFailed(event, "INSUFFICIENT_BALANCE");
+
+            PaymentFailedEvent failedEvent = buildFailedEvent(event, "INSUFFICIENT_BALANCE");
+            outboxEventService.save(failedEvent, paymentFailedTopic, sagaIdStr);
             log.info("결제 실패. sagaId={}", event.getSagaId());
         }
     }
 
-    private void publishPaymentSuccess(PaymentRequestedEvent event) {
+    private PaymentSuccessEvent buildSuccessEvent(PaymentRequestedEvent event) {
         PaymentSuccessEvent successEvent = PaymentSuccessEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(event.getSagaId())
@@ -83,16 +92,10 @@ public class ProcessPaymentUseCase {
                 .occurredAt(LocalDateTime.now())
                 .build();
         successEvent.setTraceId(event.getTraceId());
-
-        String sagaIdStr = event.getSagaId().toString();
-        jsonUtil.toJson(successEvent)
-                .ifPresentOrElse(
-                        json -> kafkaPublisher.send(paymentSuccessTopic, sagaIdStr, sagaIdStr, event.getTraceId(), json),
-                        () -> log.error("payment-success 직렬화 실패. sagaId={}", event.getSagaId())
-                );
+        return successEvent;
     }
 
-    private void publishPaymentFailed(PaymentRequestedEvent event, String reason) {
+    private PaymentFailedEvent buildFailedEvent(PaymentRequestedEvent event, String reason) {
         PaymentFailedEvent failedEvent = PaymentFailedEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(event.getSagaId())
@@ -102,12 +105,6 @@ public class ProcessPaymentUseCase {
                 .reason(reason)
                 .build();
         failedEvent.setTraceId(event.getTraceId());
-
-        String sagaIdStr = event.getSagaId().toString();
-        jsonUtil.toJson(failedEvent)
-                .ifPresentOrElse(
-                        json -> kafkaPublisher.send(paymentFailedTopic, sagaIdStr, sagaIdStr, event.getTraceId(), json),
-                        () -> log.error("payment-failed 직렬화 실패. sagaId={}", event.getSagaId())
-                );
+        return failedEvent;
     }
 }

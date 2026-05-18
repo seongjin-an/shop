@@ -19,7 +19,9 @@ Microservices-based e-commerce platform practicing Event-Driven Architecture and
 
 ```bash
 cd docker && docker compose up -d
-./docker/create-topics.sh   # Kafka 토픽 생성 (최초 1회)
+./docker/create-topics.sh        # Kafka 토픽 생성 (최초 1회)
+mysql -h 127.0.0.1 -P 23306 -u root -p1234 shop < docker/migrate-outbox.sql  # Outbox 테이블 재생성 (최초 1회)
+./docker/register-debezium.sh    # Debezium 커넥터 등록 (최초 1회, kafka-connect 기동 후)
 ```
 
 | 인프라 | 주소 |
@@ -28,6 +30,7 @@ cd docker && docker compose up -d
 | Redis | `localhost:16379` |
 | Kafka | `localhost:9094` |
 | Kafka UI | `http://localhost:18090` |
+| Kafka Connect (Debezium) | `http://localhost:28083` |
 | RedisInsight | `http://localhost:15540` |
 
 ## Build & Run
@@ -131,8 +134,13 @@ com.ansj.<service>/
 - `InboxEventService.existsByEventId()`로 중복 소비 방지. `eventId` unique 제약.
 - shop-stock의 inbox는 보상 트랜잭션 시 `findBySagaIdAndEventType(sagaId, "ORDER_CREATED")`로 원본 주문 아이템을 복원하는 데에도 활용됨.
 
-### Outbox 패턴
-구조는 잡혀 있으나 아직 미활성. 현재는 `KafkaTemplate.send()` 직접 호출.
+### Outbox 패턴 (Debezium CDC)
+모든 서비스에서 `kafkaTemplate.send()` 직접 호출을 제거하고 **DB 트랜잭션 내 outbox INSERT → Debezium → Kafka** 로 대체.
+- outbox 테이블: `order_outbox_event`, `stock_outbox_event`, `payment_outbox_event`, `product_outbox_event`
+- 핵심 컬럼: `destination_topic`(라우팅 토픽), `partition_key`(Kafka 메시지 키), `payload`(이벤트 JSON)
+- Debezium MySQL Connector: `debezium/connect:2.7` (Kafka Connect `localhost:28083`)
+- shop-stock: `ReserveStockTransactionService`가 성공/실패 경로를 각각 독립 트랜잭션으로 처리
+- OTel Baggage 헤더는 Debezium 경유 시 전파 안 됨 (traceId는 payload 내에 유지)
 
 ### OrderEntity 상태 전이
 ```

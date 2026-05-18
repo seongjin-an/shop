@@ -1,9 +1,9 @@
-package com.ansj.shopproduct.box.service;
+package com.ansj.shoporder.box.service;
 
-import com.ansj.shopproduct.box.entity.OutboxEventEntity;
-import com.ansj.shopproduct.box.repository.OutboxEventRepository;
-import com.ansj.shopproduct.common.BaseEvent;
-import com.ansj.shopproduct.common.JsonUtil;
+import com.ansj.shoporder.box.entity.OutboxEventEntity;
+import com.ansj.shoporder.box.repository.OutboxEventRepository;
+import com.ansj.shoporder.common.BaseEvent;
+import com.ansj.shoporder.common.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -1,9 +1,9 @@
 package com.ansj.shoporder.usecase;
 
+import com.ansj.shoporder.box.service.OutboxEventService;
 import com.ansj.shoporder.common.AggregateId;
 import com.ansj.shoporder.common.EventId;
 import com.ansj.shoporder.common.JsonUtil;
-import com.ansj.shoporder.common.SagaAwareKafkaPublisher;
 import com.ansj.shoporder.common.SagaId;
 import com.ansj.shoporder.metrics.SagaMetrics;
 import com.ansj.shoporder.order.entity.OrderEntity;
@@ -35,7 +35,7 @@ public class PaymentResultUseCase {
     private String stockReleaseRequestedTopic;
 
     private final OrderService orderService;
-    private final SagaAwareKafkaPublisher kafkaPublisher;
+    private final OutboxEventService outboxEventService;
     private final JsonUtil jsonUtil;
     private final SagaMetrics sagaMetrics;
 
@@ -49,7 +49,7 @@ public class PaymentResultUseCase {
         String traceId = event.getTraceId();
         for (OrderItemEntity item : order.getOrderItems()) {
             if (item.getReservationStatus() == OrderItemReservationStatus.RESERVED) {
-                publishConfirm(order, item, sagaIdStr, traceId);
+                saveConfirmOutbox(order, item, sagaIdStr, traceId);
                 item.markConfirmed();
             }
         }
@@ -66,7 +66,7 @@ public class PaymentResultUseCase {
         String traceId = event.getTraceId();
         for (OrderItemEntity item : order.getOrderItems()) {
             if (item.getReservationStatus() == OrderItemReservationStatus.RESERVED) {
-                publishRelease(order, item, sagaIdStr, traceId, "payment-failed");
+                saveReleaseOutbox(order, item, sagaIdStr, traceId, "payment-failed");
                 item.markReleased();
             }
         }
@@ -80,8 +80,8 @@ public class PaymentResultUseCase {
 
     // ─── helpers ──────────────────────────────────────────────────────────────
 
-    private void publishConfirm(OrderEntity order, OrderItemEntity item, String sagaIdStr, String traceId) {
-        StockConfirmRequestedEvent confirmEvent = StockConfirmRequestedEvent.builder()
+    private void saveConfirmOutbox(OrderEntity order, OrderItemEntity item, String sagaIdStr, String traceId) {
+        StockConfirmRequestedEvent event = StockConfirmRequestedEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(SagaId.from(order.getSagaId()))
                 .aggregateId(AggregateId.from(order.getOrderId()))
@@ -91,22 +91,13 @@ public class PaymentResultUseCase {
                 .quantity(item.getQuantity())
                 .orderItemId(item.getOrderItemId())
                 .build();
-        confirmEvent.setTraceId(traceId);
-
-        jsonUtil.toJson(confirmEvent).ifPresentOrElse(
-                json -> kafkaPublisher.send(
-                        stockConfirmRequestedTopic,
-                        item.getProductId().toString(),
-                        sagaIdStr,
-                        traceId,
-                        json
-                ),
-                () -> log.error("stock-confirm-requested 직렬화 실패. orderItemId={}", item.getOrderItemId())
-        );
+        event.setTraceId(traceId);
+        outboxEventService.save(event, stockConfirmRequestedTopic,
+                item.getProductId().toString());
     }
 
-    private void publishRelease(OrderEntity order, OrderItemEntity item, String sagaIdStr, String traceId, String reason) {
-        StockReleaseRequestedEvent releaseEvent = StockReleaseRequestedEvent.builder()
+    private void saveReleaseOutbox(OrderEntity order, OrderItemEntity item, String sagaIdStr, String traceId, String reason) {
+        StockReleaseRequestedEvent event = StockReleaseRequestedEvent.builder()
                 .eventId(EventId.newId())
                 .sagaId(SagaId.from(order.getSagaId()))
                 .aggregateId(AggregateId.from(order.getOrderId()))
@@ -117,17 +108,8 @@ public class PaymentResultUseCase {
                 .orderItemId(item.getOrderItemId())
                 .reason(reason)
                 .build();
-        releaseEvent.setTraceId(traceId);
-
-        jsonUtil.toJson(releaseEvent).ifPresentOrElse(
-                json -> kafkaPublisher.send(
-                        stockReleaseRequestedTopic,
-                        item.getProductId().toString(),
-                        sagaIdStr,
-                        traceId,
-                        json
-                ),
-                () -> log.error("stock-release-requested 직렬화 실패. orderItemId={}", item.getOrderItemId())
-        );
+        event.setTraceId(traceId);
+        outboxEventService.save(event, stockReleaseRequestedTopic,
+                item.getProductId().toString());
     }
 }

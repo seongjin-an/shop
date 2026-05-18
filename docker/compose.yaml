@@ -2,6 +2,7 @@ services:
   mysql:
     image: mysql:8.0.33
     restart: unless-stopped
+    command: --log-bin=mysql-bin --binlog-format=ROW --binlog-row-image=FULL --server-id=1
     environment:
       MYSQL_ROOT_PASSWORD: 1234
       MYSQL_DATABASE: shop
@@ -190,3 +191,36 @@ services:
       - "19308:9308"
     depends_on:
       - kafka
+
+  # ──────────────────────────────────────────
+  # Debezium (Kafka Connect + MySQL CDC)
+  # REST API: http://localhost:28083
+  # 초기 설정: ./register-debezium.sh 실행 (컨테이너 기동 후 1회)
+  # ──────────────────────────────────────────
+  kafka-connect:
+    image: quay.io/debezium/connect:3.1
+    container_name: kafka-connect
+    restart: unless-stopped
+    ports:
+      - "28083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: shop-connect-cluster
+      CONFIG_STORAGE_TOPIC: debezium-configs
+      OFFSET_STORAGE_TOPIC: debezium-offsets
+      STATUS_STORAGE_TOPIC: debezium-status
+      KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+    depends_on:
+      - kafka
+      - mysql
+#  connect:
+#    image: quay.io/debezium/connect:3.1
+#    ports:
+#      - "8083:8083"
+#    environment:
+#      BOOTSTRAP_SERVERS: kafka:9092
+#      GROUP_ID: 1
+#      CONFIG_STORAGE_TOPIC: connect_configs
+#      OFFSET_STORAGE_TOPIC: connect_offsets
+#      STATUS_STORAGE_TOPIC: connect_statuses

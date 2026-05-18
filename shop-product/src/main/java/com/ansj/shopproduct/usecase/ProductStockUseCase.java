@@ -1,19 +1,16 @@
 package com.ansj.shopproduct.usecase;
 
-import com.ansj.shopproduct.box.service.InboxEventService;
 import com.ansj.shopproduct.box.service.OutboxEventService;
 import com.ansj.shopproduct.common.AggregateId;
 import com.ansj.shopproduct.common.EventId;
-import com.ansj.shopproduct.common.JsonUtil;
 import com.ansj.shopproduct.common.SagaId;
+import com.ansj.shopproduct.product.dto.CreateProductDto;
 import com.ansj.shopproduct.product.event.outbound.ProductCreatedEvent;
 import com.ansj.shopproduct.product.event.outbound.StockItem;
-import com.ansj.shopproduct.product.dto.CreateProductDto;
 import com.ansj.shopproduct.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,13 +25,7 @@ public class ProductStockUseCase {
     private String productCreatedTopic;
 
     private final ProductService productService;
-    //private final InboxEventService inboxEventService;
-    //private final OutboxEventService outboxEventService;
-
-    private final KafkaTemplate<String, String> kafkaTemplate;
-    private final JsonUtil jsonUtil;
-
-    /* 나중에 read service, write service 를 분리하든가 */
+    private final OutboxEventService outboxEventService;
 
     @Transactional
     public AggregateId createProductWithStock(CreateProductDto dto) {
@@ -43,9 +34,7 @@ public class ProductStockUseCase {
         MDC.put("sagaId", sagaId.toString());
         try {
             StockItem stockItem = StockItem.of(productId, dto.getQuantity());
-
-            // outbox event 는 나중에 적용
-            ProductCreatedEvent product = new ProductCreatedEvent(
+            ProductCreatedEvent event = new ProductCreatedEvent(
                     EventId.newId(),
                     sagaId,
                     productId,
@@ -53,9 +42,8 @@ public class ProductStockUseCase {
                     LocalDateTime.now(),
                     stockItem);
 
-            jsonUtil.toJson(product)
-                    .ifPresent(json -> kafkaTemplate.send(productCreatedTopic, json));
-
+            // 상품 저장과 동일 트랜잭션 내에서 outbox INSERT → Debezium이 Kafka로 발행
+            outboxEventService.save(event, productCreatedTopic, productId.toString());
             return productId;
         } finally {
             MDC.clear();

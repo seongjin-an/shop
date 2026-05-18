@@ -1,6 +1,5 @@
 package com.ansj.shopproduct.box.entity;
 
-
 import com.ansj.shopproduct.common.UuidUtils;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -21,43 +20,40 @@ import java.util.UUID;
         }
 )
 public class OutboxEventEntity {
+
     @Id
     @Column(name = "id", columnDefinition = "BINARY(16)")
     private UUID id;
 
-    // 이 이벤트 자체의 고유 ID (절대 재사용 X)
     @Column(name = "event_id", nullable = false, unique = true, columnDefinition = "BINARY(16)")
     private UUID eventId;
 
-    // Saga 흐름 식별자 (처음 이벤트에서 생성, 이후 유지)
     @Column(name = "saga_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID sagaId;
 
     @Column(name = "event_type", nullable = false)
-    private String eventType;        // ex) OrderCreated
+    private String eventType;
 
     @Column(name = "aggregate_type", nullable = false)
-    private String aggregateType;    // ex) ORDER
+    private String aggregateType;
 
-    @Column(name = "aggregate_id", nullable = false, unique = true, columnDefinition = "BINARY(16)")
-    private UUID aggregateId;      // ex) orderId
+    @Column(name = "aggregate_id", nullable = false, columnDefinition = "BINARY(16)")
+    private UUID aggregateId;
 
     @Lob
-    @Column(name = "payload", nullable = false)
-    private String payload;          // JSON
+    @Column(name = "payload", nullable = false, columnDefinition = "LONGTEXT")
+    private String payload;
 
-    //@Enumerated(EnumType.STRING) // 추후에 수정하자
-    @Column(name = "status", nullable = false)
-    private String status;     // NEW, SENT
+    // Debezium EventRouter: 이 값이 Kafka 토픽 이름으로 사용됨
+    @Column(name = "destination_topic", nullable = false)
+    private String destinationTopic;
+
+    // Debezium EventRouter: 이 값이 Kafka 메시지 키(파티션 키)로 사용됨
+    @Column(name = "partition_key", nullable = false)
+    private String partitionKey;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
-
-    @Column(name = "sent_at")
-    private LocalDateTime sentAt;
-
-    @Column(name = "retry_count")
-    private Integer retryCount;
 
     @PrePersist
     public void prePersist() {
@@ -67,26 +63,17 @@ public class OutboxEventEntity {
     }
 
     @Builder
-    public OutboxEventEntity(
-            UUID eventId,
-            UUID sagaId,
-            String eventType,
-            String aggregateType,
-            UUID aggregateId,
-            String payload
-    ) {
+    public OutboxEventEntity(UUID eventId, UUID sagaId, String eventType,
+                             String aggregateType, UUID aggregateId, String payload,
+                             String destinationTopic, String partitionKey) {
         this.eventId = eventId;
         this.sagaId = sagaId;
         this.eventType = eventType;
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
         this.payload = payload;
-        this.status = "NEW";
+        this.destinationTopic = destinationTopic;
+        this.partitionKey = partitionKey;
         this.createdAt = LocalDateTime.now();
-    }
-
-    public void markAsSent() {
-        this.status = "SENT";
-        this.sentAt = LocalDateTime.now();
     }
 }

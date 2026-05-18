@@ -12,7 +12,7 @@ USER_CREDENTIALS = [
 
 PRODUCTS = [
     {
-        "productId": "019db399-8554-7952-9699-fd2faf18a787",
+        "productId": "019e3979-791a-7ca1-9143-dd531f0987d6",
         "productName": "VitaminA",
         "unitPrice": 30000,
     },
