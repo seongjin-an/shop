@@ -5,8 +5,7 @@ import com.ansj.shoporder.order.event.inbound.PaymentFailedEvent;
 import com.ansj.shoporder.order.event.inbound.PaymentSuccessEvent;
 import com.ansj.shoporder.order.event.inbound.StockReserveFailedEvent;
 import com.ansj.shoporder.order.event.inbound.StockReservedEvent;
-import com.ansj.shoporder.usecase.PaymentResultUseCase;
-import com.ansj.shoporder.usecase.StockReserveResultUseCase;
+import com.ansj.shoporder.saga.OrderSagaOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -20,8 +19,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrderKafkaConsumer {
 
-    private final StockReserveResultUseCase stockReserveResultUseCase;
-    private final PaymentResultUseCase paymentResultUseCase;
+    private final OrderSagaOrchestrator orchestrator;
     private final JsonUtil jsonUtil;
 
     @KafkaListener(
@@ -35,7 +33,7 @@ public class OrderKafkaConsumer {
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
                         if (event.getTraceId() != null) MDC.put("traceId", event.getTraceId());
-                        stockReserveResultUseCase.onStockReserved(event);
+                        orchestrator.onStockReserved(event);
                     });
         } catch (Exception e) {
             log.error("stock-reserved 처리 중 오류. cause: {}", e.getMessage(), e);
@@ -55,7 +53,7 @@ public class OrderKafkaConsumer {
             jsonUtil.fromJson(record.value(), StockReserveFailedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
-                        stockReserveResultUseCase.onStockReserveFailed(event);
+                        orchestrator.onStockReserveFailed(event);
                     });
         } catch (Exception e) {
             log.error("stock-reserve-failed 처리 중 오류. cause: {}", e.getMessage(), e);
@@ -75,7 +73,7 @@ public class OrderKafkaConsumer {
             jsonUtil.fromJson(record.value(), PaymentSuccessEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
-                        paymentResultUseCase.onPaymentSuccess(event);
+                        orchestrator.onPaymentSuccess(event);
                     });
         } catch (Exception e) {
             log.error("payment-success 처리 중 오류. cause: {}", e.getMessage(), e);
@@ -95,7 +93,7 @@ public class OrderKafkaConsumer {
             jsonUtil.fromJson(record.value(), PaymentFailedEvent.class)
                     .ifPresent(event -> {
                         MDC.put("sagaId", event.getSagaId().toString());
-                        paymentResultUseCase.onPaymentFailed(event);
+                        orchestrator.onPaymentFailed(event);
                     });
         } catch (Exception e) {
             log.error("payment-failed 처리 중 오류. cause: {}", e.getMessage(), e);
