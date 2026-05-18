@@ -1,0 +1,75 @@
+---
+# shop-stock: web-application-type=none → management 포트(8083)만 노출
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-stock
+  namespace: shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-stock
+  template:
+    metadata:
+      labels:
+        app: shop-stock
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+    spec:
+      containers:
+        - name: shop-stock
+          image: ${ECR_REGISTRY}/shop/shop-stock:${IMAGE_TAG}
+          ports:
+            - containerPort: 8083   # management 포트
+          env:
+            - name: DB_HOST
+              value: mysql
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: shop-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-db-credentials
+                  key: password
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: OTEL_SERVICE_NAME
+              value: shop-stock
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 30
+---
+# OTel Collector이 /actuator/prometheus를 scrape하기 위한 Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-stock
+  namespace: shop
+spec:
+  selector:
+    app: shop-stock
+  ports:
+    - port: 8083
+      targetPort: 8083

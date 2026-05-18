@@ -1,0 +1,155 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: shop
+data:
+  otel-collector-config.yml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      # Actuator /prometheus scrape — K8s 서비스 이름으로 직접 접근
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'shop-services'
+              scrape_interval: 10s
+              metrics_path: /actuator/prometheus
+              static_configs:
+                - targets: ['shop-user:8080']
+                  labels: { service: shop-user }
+                - targets: ['shop-product:8081']
+                  labels: { service: shop-product }
+                - targets: ['shop-order:8082']
+                  labels: { service: shop-order }
+                - targets: ['shop-stock:8083']
+                  labels: { service: shop-stock }
+                - targets: ['shop-payment:8085']
+                  labels: { service: shop-payment }
+            - job_name: 'tempo'
+              static_configs:
+                - targets: ['tempo:3200']
+
+    processors:
+      batch:
+        timeout: 2s
+        send_batch_size: 1024
+      resource:
+        attributes:
+          - key: deployment.environment
+            value: dev
+            action: upsert
+      transform/saga_id:
+        trace_statements:
+          - context: span
+            statements:
+              - set(attributes["saga.id"], attributes["messaging.kafka.message.key"])
+                  where attributes["messaging.kafka.message.key"] != nil
+      attributes/baggage:
+        actions:
+          - key: saga.id
+            action: upsert
+            from_context: baggage.saga.id
+      transform/logs:
+        log_statements:
+          - context: log
+            statements:
+              - set(severity_text, ConvertCase(severity_text, "lower")) where severity_text != ""
+
+    exporters:
+      otlp/tempo:
+        endpoint: tempo:4317
+        tls:
+          insecure: true
+      otlphttp/loki:
+        endpoint: http://loki:3100/otlp
+      prometheusremotewrite:
+        endpoint: http://prometheus:9090/api/v1/write
+        resource_to_telemetry_conversion:
+          enabled: true
+        target_info:
+          enabled: true
+      debug:
+        verbosity: basic
+
+    service:
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          address: 0.0.0.0:8888
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch, resource, transform/saga_id, attributes/baggage]
+          exporters: [otlp/tempo]
+        logs:
+          receivers: [otlp]
+          processors: [batch, resource, transform/logs]
+          exporters: [otlphttp/loki]
+        metrics:
+          receivers: [otlp, prometheus]
+          processors: [batch, resource]
+          exporters: [prometheusremotewrite]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.103.0
+          args: ["--config=/conf/otel-collector-config.yml"]
+          ports:
+            - containerPort: 4317   # OTLP gRPC
+            - containerPort: 4318   # OTLP HTTP
+            - containerPort: 8888   # self-metrics
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: shop
+spec:
+  selector:
+    app: otel-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+    - name: metrics
+      port: 8888
+      targetPort: 8888

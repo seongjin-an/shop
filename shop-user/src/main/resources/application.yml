@@ -34,9 +34,9 @@ spring:
     encoding: UTF-8
   datasource:
     hikari:
-      jdbc-url: jdbc:mysql://localhost:23306/shop
-      username: dev_user
-      password: dev_password
+      jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:23306}/shop
+      username: ${DB_USER:dev_user}
+      password: ${DB_PASSWORD:dev_password}
       driver-class-name: com.mysql.cj.jdbc.Driver
       pool-name: ShopConnectionPool
       minimum-idle: 10
@@ -58,8 +58,8 @@ spring:
     store-type: none
   data:
     redis:
-      host: localhost
-      port: 16379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:16379}
       repositories:
         enabled: false
 

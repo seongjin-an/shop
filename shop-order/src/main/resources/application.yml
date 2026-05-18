@@ -6,9 +6,9 @@ spring:
     name: shop-order
   datasource:
     hikari:
-      jdbc-url: jdbc:mysql://localhost:23306/shop
-      username: dev_user
-      password: dev_password
+      jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:23306}/shop
+      username: ${DB_USER:dev_user}
+      password: ${DB_PASSWORD:dev_password}
       driver-class-name: com.mysql.cj.jdbc.Driver
       pool-name: ShopConnectionPool
       minimum-idle: 10
@@ -24,7 +24,7 @@ spring:
       hibernate:
         format_sql: true
   kafka:
-    bootstrap-servers: localhost:9094
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer

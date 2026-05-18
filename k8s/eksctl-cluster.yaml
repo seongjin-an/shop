@@ -1,0 +1,42 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: shop-dev-cluster
+  region: ap-northeast-2   # 서울 리전
+  version: "1.31"
+
+# 가용 영역 2개 — 최소 비용으로 고가용성 확보
+availabilityZones:
+  - ap-northeast-2a
+  - ap-northeast-2c
+
+managedNodeGroups:
+  - name: shop-nodes
+    instanceType: t3.xlarge   # vCPU 4, Mem 16GB — 인프라+앱+관측 스택 전체 수용
+    minSize: 2
+    maxSize: 4
+    desiredCapacity: 3
+    volumeSize: 50
+    iam:
+      withAddonPolicies:
+        # ALB Ingress Controller에 필요
+        awsLoadBalancerController: true
+        # ECR 이미지 pull
+        imageBuilder: true
+
+# ALB Ingress Controller 설치에 필요한 OIDC 설정
+iam:
+  withOIDC: true
+  serviceAccounts:
+    - metadata:
+        name: aws-load-balancer-controller
+        namespace: kube-system
+      wellKnownPolicies:
+        awsLoadBalancerController: true
+
+# 애드온
+addons:
+  - name: vpc-cni
+  - name: coredns
+  - name: kube-proxy

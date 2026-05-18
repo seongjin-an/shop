@@ -1,0 +1,71 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-gateway
+  namespace: shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-gateway
+  template:
+    metadata:
+      labels:
+        app: shop-gateway
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+    spec:
+      containers:
+        - name: shop-gateway
+          image: ${ECR_REGISTRY}/shop/shop-gateway:${IMAGE_TAG}
+          ports:
+            - containerPort: 8090
+          env:
+            - name: REDIS_HOST
+              value: redis
+            - name: REDIS_PORT
+              value: "6379"
+            # K8s 서비스 DNS → 각 서비스로 라우팅
+            - name: USER_SERVICE_URL
+              value: http://shop-user:8080
+            - name: PRODUCT_SERVICE_URL
+              value: http://shop-product:8081
+            - name: ORDER_SERVICE_URL
+              value: http://shop-order:8082
+            # frontend가 ALB를 통해 들어오므로 ALB 도메인 또는 와일드카드 허용
+            - name: CORS_ALLOWED_ORIGIN
+              value: "*"
+            - name: OTEL_SERVICE_NAME
+              value: shop-gateway
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8090
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8090
+            initialDelaySeconds: 60
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-gateway
+  namespace: shop
+spec:
+  selector:
+    app: shop-gateway
+  ports:
+    - port: 8090
+      targetPort: 8090
